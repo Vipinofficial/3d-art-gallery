@@ -1,459 +1,565 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, ArrowRight, Play, Palette, Zap, Globe, Users, BarChart3, Eye, Heart, TrendingUp } from 'lucide-react';
 import { Button } from './components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
-import { Badge } from './components/ui/badge';
-import { Play, Palette, Zap, Globe, ArrowRight, Star, Users, Award, Eye } from 'lucide-react';
-
-// Import custom components
-import ThreeBackground from './components/ThreeBackground';
-import InteractiveGallery from './components/InteractiveGallery';
-import ParticleSystem from './components/ParticleSystem';
-import GalleryCreator from './components/GalleryCreator';
-import GalleryViewer from './components/GalleryViewer';
-import MobileNavigation from './components/MobileNavigation';
-import {
-  AnimatedCounter,
-  MagneticButton,
-  FloatingCard,
-  TextReveal,
-  MorphingShape,
-  ParallaxContainer,
-  GlitchText,
-  ScrollSection,
-  InteractiveTimeline
-} from './components/AnimatedSection';
-
-// Import GSAP hooks
-import {
-  useScrollAnimations,
-  useLoadingAnimation,
-  useHoverAnimations,
-  useScrollProgress,
-  useMagneticEffect
-} from './hooks/useGSAP';
-
 import './App.css';
 
-function App() {
-  const [currentView, setCurrentView] = useState('home');
-  const [isLoading, setIsLoading] = useState(true);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [galleries, setGalleries] = useState([]);
-  const [selectedGallery, setSelectedGallery] = useState(null);
-  const heroRef = useRef();
-
-  // Initialize animations
-  useScrollAnimations();
-  useLoadingAnimation(isLoading);
-  useHoverAnimations();
-  useScrollProgress();
-  useMagneticEffect(heroRef, 0.1);
-
-  // Loading simulation
+// Loading Screen Component
+function LoadingScreen({ onComplete }) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-
-    // Load existing galleries from localStorage
-    const savedGalleries = JSON.parse(localStorage.getItem('galleries') || '[]');
-    setGalleries(savedGalleries);
+      onComplete();
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
-
-  // Gallery management functions
-  const handleGalleryCreated = (newGallery) => {
-    setGalleries(prev => [...prev, newGallery]);
-    setCurrentView('home');
-    // Show success message or redirect
-    alert('Gallery created successfully!');
-  };
-
-  const handleViewGallery = (gallery) => {
-    setSelectedGallery(gallery);
-    setCurrentView('viewer');
-  };
-
-  const handleCreateGallery = () => {
-    setCurrentView('create');
-  };
-
-  // Mouse tracking
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 2 - 1,
-        y: -(e.clientY / window.innerHeight) * 2 + 1
-      });
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  const features = [
-    {
-      icon: <Palette className="w-8 h-8" />,
-      title: "Immersive 3D Galleries",
-      description: "Create stunning virtual art spaces with WebGL technology"
-    },
-    {
-      icon: <Zap className="w-8 h-8" />,
-      title: "Real-time Interactions",
-      description: "Engage visitors with dynamic animations and effects"
-    },
-    {
-      icon: <Globe className="w-8 h-8" />,
-      title: "Global Accessibility",
-      description: "Share your art with audiences worldwide instantly"
-    },
-    {
-      icon: <Eye className="w-8 h-8" />,
-      title: "Analytics Dashboard",
-      description: "Track visitor engagement and gallery performance"
-    }
-  ];
-
-  const timelineItems = [
-    {
-      title: "Upload Your Artwork",
-      description: "Simply drag and drop your digital art pieces"
-    },
-    {
-      title: "Choose Gallery Template",
-      description: "Select from our collection of stunning 3D environments"
-    },
-    {
-      title: "Customize Experience",
-      description: "Add interactive elements and animations"
-    },
-    {
-      title: "Share & Showcase",
-      description: "Publish your gallery and share with the world"
-    }
-  ];
-
-  const stats = [
-    { label: "Active Galleries", value: galleries.length, suffix: "" },
-    { label: "Artists Worldwide", value: 850, suffix: "+" },
-    { label: "Monthly Visitors", value: 45, suffix: "K+" },
-    { label: "Artworks Displayed", value: galleries.reduce((total, gallery) => total + (gallery.artworks?.length || 0), 0), suffix: "" }
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="loading-screen">
-        <div className="text-center">
-          <div className="loading-spinner mb-6"></div>
-          <TextReveal className="text-2xl font-bold text-white mb-2">
-            3D Art Gallery
-          </TextReveal>
-          <p className="text-gray-400">Loading immersive experience...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [onComplete]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
-      {/* Scroll Progress Indicator */}
-      <div className="scroll-indicator fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 z-50 scale-x-0"></div>
-
-      {/* Background Effects */}
-      <ThreeBackground />
-      <ParticleSystem />
-
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-40 glass-effect border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 nav-item">
-              <MorphingShape className="w-10 h-10" />
-              <div>
-                <h1 className="text-xl font-bold gradient-text">3D Art Gallery</h1>
-                <p className="text-xs text-gray-400">Interactive Experience</p>
-              </div>
-            </div>
-
-            <div className="hidden md:flex items-center space-x-6">
-              {['Home', 'Gallery', 'Create', 'Features', 'About'].map((item, index) => (
-                <button
-                  key={item}
-                  className="nav-item text-sm font-medium text-gray-300 hover:text-white transition-colors relative group"
-                  onClick={() => setCurrentView(item.toLowerCase())}
-                >
-                  {item}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 group-hover:w-full transition-all duration-300"></span>
-                </button>
-              ))}
-              
-              <MagneticButton className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full font-medium hover-btn">
-                Get Started
-              </MagneticButton>
-            </div>
-
-            {/* Mobile Navigation */}
-            <MobileNavigation currentView={currentView} setCurrentView={setCurrentView} />
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="pt-20">
-        {currentView === 'home' && (
-          <>
-            {/* Hero Section */}
-            <section ref={heroRef} className="min-h-screen flex items-center justify-center relative">
-              <div className="max-w-7xl mx-auto px-6 text-center hero-content">
-                <div className="mb-8">
-                  <TextReveal className="text-6xl md:text-8xl font-black mb-6">
-                    <GlitchText>Create</GlitchText> Stunning
-                  </TextReveal>
-                  <TextReveal className="text-6xl md:text-8xl font-black gradient-text mb-8">
-                    3D Art Galleries
-                  </TextReveal>
-                </div>
-
-                <ScrollSection animation="fadeIn" className="mb-12">
-                  <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                    Transform your digital artwork into immersive virtual exhibitions 
-                    with cutting-edge WebGL technology and interactive animations.
-                  </p>
-                </ScrollSection>
-
-                <ScrollSection animation="scaleUp" className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                  <MagneticButton 
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover-btn flex items-center gap-3"
-                    strength={0.5}
-                    onClick={handleCreateGallery}
-                  >
-                    <Play className="w-5 h-5" />
-                    Start Creating
-                  </MagneticButton>
-                  
-                  <MagneticButton 
-                    className="border border-white/20 text-white px-8 py-4 rounded-full text-lg font-semibold hover-btn glass-effect"
-                    onClick={() => setCurrentView('gallery')}
-                  >
-                    Explore Galleries
-                  </MagneticButton>
-                </ScrollSection>
-
-                {/* Floating Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 stagger-container">
-                  {stats.map((stat, index) => (
-                    <FloatingCard key={index} className="stagger-item text-center p-6 glass-effect rounded-2xl" delay={index * 0.2}>
-                      <div className="text-3xl font-bold gradient-text mb-2">
-                        <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                      </div>
-                      <p className="text-gray-400 text-sm">{stat.label}</p>
-                    </FloatingCard>
-                  ))}
-                </div>
-              </div>
-
-              {/* Scroll Indicator */}
-              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-                <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-                  <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse"></div>
-                </div>
-              </div>
-            </section>
-
-            {/* Features Section */}
-            <ScrollSection className="py-32 relative">
-              <ParallaxContainer speed={0.3} className="absolute inset-0 opacity-20">
-                <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-pink-900/20"></div>
-              </ParallaxContainer>
-              
-              <div className="max-w-7xl mx-auto px-6 relative z-10">
-                <div className="text-center mb-20">
-                  <TextReveal className="text-5xl font-bold mb-6">
-                    Powerful Features
-                  </TextReveal>
-                  <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                    Everything you need to create professional virtual art exhibitions
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 stagger-container">
-                  {features.map((feature, index) => (
-                    <FloatingCard 
-                      key={index} 
-                      className="stagger-item p-8 glass-effect rounded-2xl text-center group"
-                      delay={index * 0.1}
-                    >
-                      <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300">
-                        {feature.icon}
-                      </div>
-                      <h3 className="text-xl font-semibold mb-4 text-white">{feature.title}</h3>
-                      <p className="text-gray-400 leading-relaxed">{feature.description}</p>
-                    </FloatingCard>
-                  ))}
-                </div>
-              </div>
-            </ScrollSection>
-
-            {/* How It Works Section */}
-            <ScrollSection className="py-32 bg-gradient-to-br from-purple-900/10 to-pink-900/10">
-              <div className="max-w-7xl mx-auto px-6">
-                <div className="text-center mb-20">
-                  <TextReveal className="text-5xl font-bold mb-6">
-                    How It Works
-                  </TextReveal>
-                  <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                    Create your virtual gallery in just four simple steps
-                  </p>
-                </div>
-
-                <div className="max-w-4xl mx-auto">
-                  <InteractiveTimeline items={timelineItems} />
-                </div>
-              </div>
-            </ScrollSection>
-
-            {/* CTA Section */}
-            <ScrollSection className="py-32 text-center">
-              <div className="max-w-4xl mx-auto px-6">
-                <TextReveal className="text-5xl font-bold mb-8">
-                  Ready to Showcase Your Art?
-                </TextReveal>
-                <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-                  Join thousands of artists who are already creating stunning virtual galleries
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                  <MagneticButton 
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-4 rounded-full text-lg font-semibold hover-btn flex items-center gap-3 mx-auto sm:mx-0"
-                    strength={0.5}
-                    onClick={handleCreateGallery}
-                  >
-                    Create Your Gallery
-                    <ArrowRight className="w-5 h-5" />
-                  </MagneticButton>
-                </div>
-              </div>
-            </ScrollSection>
-          </>
-        )}
-
-        {currentView === 'gallery' && (
-          <section className="min-h-screen">
-            {selectedGallery ? (
-              <GalleryViewer 
-                gallery={selectedGallery}
-                onClose={() => {
-                  setSelectedGallery(null);
-                  setCurrentView('gallery');
-                }}
-              />
-            ) : galleries.length > 0 ? (
-              <div className="py-20">
-                <div className="max-w-7xl mx-auto px-6">
-                  <div className="text-center mb-12">
-                    <h2 className="text-4xl font-bold mb-4">Gallery Collection</h2>
-                    <p className="text-xl text-gray-300">Explore amazing virtual art galleries</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {galleries.map((gallery) => (
-                      <FloatingCard key={gallery.id} className="p-6 glass-effect rounded-xl cursor-pointer" onClick={() => handleViewGallery(gallery)}>
-                        <div className="aspect-video bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg mb-4 flex items-center justify-center">
-                          <span className="text-white font-semibold">Gallery Preview</span>
-                        </div>
-                        <h3 className="text-xl font-semibold mb-2 text-white">{gallery.name}</h3>
-                        <p className="text-gray-400 text-sm mb-3">{gallery.description}</p>
-                        <div className="flex justify-between items-center">
-                          <Badge>{gallery.artworks?.length || 0} artworks</Badge>
-                          <Button size="sm" onClick={(e) => { e.stopPropagation(); handleViewGallery(gallery); }}>
-                            View Gallery
-                          </Button>
-                        </div>
-                      </FloatingCard>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <InteractiveGallery 
-                onArtworkClick={(artwork) => console.log('Clicked artwork:', artwork)}
-              />
-            )}
-          </section>
-        )}
-
-        {currentView === 'create' && (
-          <section className="min-h-screen py-20">
-            <GalleryCreator onGalleryCreated={handleGalleryCreated} />
-          </section>
-        )}
-
-        {currentView === 'features' && (
-          <ScrollSection className="py-32">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-20">
-                <TextReveal className="text-5xl font-bold mb-6">
-                  Advanced Features
-                </TextReveal>
-                <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                  Discover all the powerful tools at your disposal
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div className="space-y-8">
-                  {features.map((feature, index) => (
-                    <FloatingCard key={index} className="p-6 glass-effect rounded-xl" delay={index * 0.1}>
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white flex-shrink-0">
-                          {feature.icon}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold mb-2 text-white">{feature.title}</h3>
-                          <p className="text-gray-400">{feature.description}</p>
-                        </div>
-                      </div>
-                    </FloatingCard>
-                  ))}
-                </div>
-
-                <div className="relative">
-                  <FloatingCard className="aspect-square glass-effect rounded-2xl p-8 flex items-center justify-center">
-                    <div className="text-center">
-                      <MorphingShape className="w-32 h-32 mx-auto mb-6" />
-                      <h3 className="text-2xl font-bold text-white mb-4">Interactive Demo</h3>
-                      <p className="text-gray-400">Experience the power of 3D galleries</p>
-                    </div>
-                  </FloatingCard>
-                </div>
-              </div>
-            </div>
-          </ScrollSection>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="py-20 border-t border-white/10 glass-effect">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center space-x-3 mb-6">
-            <MorphingShape className="w-8 h-8" />
-            <span className="text-xl font-bold gradient-text">3D Art Gallery</span>
-          </div>
-          <p className="text-gray-400 mb-8">
-            Transforming digital art into immersive experiences
-          </p>
-          <div className="flex justify-center space-x-8 text-sm text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Support</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
-          </div>
-        </div>
-      </footer>
-    </div>
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.8 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-deep-space"
+    >
+      <div className="text-center">
+        {/* Loading Animation */}
+        <motion.div
+          animate={{ 
+            rotate: 360,
+            scale: [1, 1.2, 1],
+          }}
+          transition={{ 
+            rotate: { duration: 2, repeat: Infinity, ease: 'linear' },
+            scale: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
+          }}
+          className="w-20 h-20 border-4 border-electric-blue/30 border-t-electric-blue rounded-full mx-auto mb-8"
+        />
+        
+        {/* Loading Text */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="text-4xl font-bold gradient-text mb-4"
+        >
+          Ultimate 3D Gallery
+        </motion.h1>
+        
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.8 }}
+          className="text-muted-foreground"
+        >
+          Loading immersive experience...
+        </motion.p>
+        
+        {/* Progress Bar */}
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: '100%' }}
+          transition={{ delay: 0.5, duration: 2.5, ease: 'easeInOut' }}
+          className="h-1 bg-gradient-to-r from-electric-blue to-cyber-purple rounded-full mt-8 mx-auto max-w-xs"
+        />
+      </div>
+    </motion.div>
   );
 }
 
-export default App;
+// Navigation Component
+function Navigation({ activeSection, setActiveSection }) {
+  const navItems = [
+    { id: 'home', label: 'Home' },
+    { id: 'explore', label: 'Explore' },
+    { id: 'create', label: 'Create' },
+    { id: 'features', label: 'Features' },
+  ];
+
+  return (
+    <motion.nav
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className="nav-glass flex items-center justify-between px-8 py-4"
+    >
+      {/* Logo */}
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+        className="flex items-center space-x-3"
+      >
+        <div className="w-10 h-10 bg-gradient-to-br from-electric-blue to-cyber-purple rounded-xl flex items-center justify-center">
+          <Sparkles className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold gradient-text">Ultimate 3D Gallery</h1>
+          <p className="text-xs text-muted-foreground">Immersive Experience</p>
+        </div>
+      </motion.div>
+
+      {/* Navigation Items */}
+      <div className="hidden md:flex items-center space-x-2">
+        {navItems.map((item, index) => {
+          const isActive = activeSection === item.id;
+          
+          return (
+            <motion.button
+              key={item.id}
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 * index, duration: 0.3 }}
+              onClick={() => setActiveSection(item.id)}
+              className={`nav-item flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                isActive 
+                  ? 'bg-electric-blue/20 text-electric-blue shadow-glow' 
+                  : 'text-muted-foreground hover:text-white'
+              }`}
+            >
+              <span className="font-medium">{item.label}</span>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* CTA Button */}
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
+      >
+        <Button className="magnetic-button bg-gradient-to-r from-electric-blue to-cyber-purple hover:shadow-glow">
+          Get Started
+        </Button>
+      </motion.div>
+    </motion.nav>
+  );
+}
+
+// Hero Section Component
+function HeroSection({ setActiveSection }) {
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <motion.div
+          animate={{ 
+            rotate: 360,
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ 
+            rotate: { duration: 20, repeat: Infinity, ease: 'linear' },
+            scale: { duration: 4, repeat: Infinity, ease: 'easeInOut' }
+          }}
+          className="absolute top-20 left-20 w-20 h-20 border border-electric-blue/20 rounded-full"
+        />
+        
+        <motion.div
+          animate={{ 
+            rotate: -360,
+            y: [0, -20, 0],
+          }}
+          transition={{ 
+            rotate: { duration: 15, repeat: Infinity, ease: 'linear' },
+            y: { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+          }}
+          className="absolute top-40 right-32 w-16 h-16 bg-gradient-to-br from-cyber-purple/20 to-holographic-pink/20 rounded-lg"
+        />
+        
+        <motion.div
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3],
+          }}
+          transition={{ 
+            duration: 5, 
+            repeat: Infinity, 
+            ease: 'easeInOut' 
+          }}
+          className="absolute bottom-32 left-32 w-12 h-12 bg-neon-green/30 rounded-full blur-sm"
+        />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+        {/* Main Heading */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="mb-8"
+        >
+          <h1 className="text-hero font-black leading-tight mb-4">
+            <span className="gradient-text">Ultimate</span>
+          </h1>
+          <h1 className="text-hero font-black leading-tight mb-4">
+            <span className="glow-text">3D Art Gallery</span>
+          </h1>
+          <p className="text-2xl md:text-4xl font-light text-muted-foreground">
+            Experience the Future of Digital Art
+          </p>
+        </motion.div>
+
+        {/* Description */}
+        <motion.p
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed"
+        >
+          Immerse yourself in cutting-edge virtual galleries powered by WebGL and Three.js. 
+          Create, explore, and share breathtaking 3D art experiences that push the boundaries 
+          of digital creativity.
+        </motion.p>
+
+        {/* CTA Buttons */}
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 1, duration: 0.8 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+        >
+          <Button
+            size="lg"
+            className="magnetic-button bg-gradient-to-r from-electric-blue to-cyber-purple hover:shadow-glow text-lg px-8 py-4 group"
+            onClick={() => setActiveSection('create')}
+          >
+            Start Creating
+            <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Button>
+          
+          <Button
+            size="lg"
+            variant="outline"
+            className="glass-effect border-electric-blue/30 text-electric-blue hover:bg-electric-blue/10 text-lg px-8 py-4 group"
+            onClick={() => setActiveSection('explore')}
+          >
+            <Play className="mr-2 w-5 h-5 group-hover:scale-110 transition-transform" />
+            Watch Demo
+          </Button>
+        </motion.div>
+
+        {/* Stats */}
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 1.5, duration: 0.8 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
+        >
+          {[
+            { icon: Sparkles, value: "10K+", label: "Artworks" },
+            { icon: Zap, value: "500+", label: "Artists" },
+            { icon: Play, value: "1M+", label: "Views" },
+            { icon: ArrowRight, value: "99%", label: "Satisfaction" }
+          ].map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 1.6 + index * 0.1, type: 'spring', stiffness: 200 }}
+              className="glass-card text-center p-6 hover:shadow-purple-glow transition-all duration-300"
+            >
+              <stat.icon className="w-8 h-8 text-electric-blue mx-auto mb-3" />
+              <div className="text-2xl font-bold gradient-text mb-1">{stat.value}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// Features Section Component
+function FeaturesSection() {
+  const features = [
+    {
+      icon: Palette,
+      title: "AI-Powered Curation",
+      description: "Smart algorithms automatically organize and recommend artworks based on style, color, and user preferences.",
+      color: "#00d4ff",
+    },
+    {
+      icon: Zap,
+      title: "Real-time Collaboration",
+      description: "Work together with artists worldwide in shared virtual spaces with live editing and feedback.",
+      color: "#8b5cf6",
+    },
+    {
+      icon: Globe,
+      title: "Global Accessibility",
+      description: "Share your galleries instantly with audiences worldwide through optimized WebGL streaming.",
+      color: "#ff006e",
+    },
+    {
+      icon: Users,
+      title: "Community Hub",
+      description: "Connect with fellow artists, join exhibitions, and participate in virtual art events.",
+      color: "#00ff88",
+    },
+  ];
+
+  return (
+    <section className="py-20 px-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Section Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold gradient-text mb-4">
+            Powerful Features
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            Everything you need to create, share, and experience stunning 3D art galleries
+          </p>
+        </motion.div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.6 }}
+              viewport={{ once: true }}
+              className="glass-card h-full min-h-[300px] relative overflow-hidden group cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+            >
+              {/* Background Gradient */}
+              <div 
+                className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300"
+                style={{ background: `linear-gradient(135deg, ${feature.color}20, ${feature.color}05)` }}
+              />
+
+              {/* Content */}
+              <div className="relative z-10 p-6 h-full flex flex-direction-column">
+                {/* Icon */}
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                  style={{ backgroundColor: `${feature.color}20` }}
+                >
+                  <feature.icon className="w-6 h-6" style={{ color: feature.color }} />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-xl font-bold text-white mb-4 kinetic-text">
+                  {feature.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-muted-foreground text-sm leading-relaxed flex-grow">
+                  {feature.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Other Section Components
+function ExploreSection() {
+  return (
+    <section className="min-h-screen flex items-center justify-center py-20">
+      <div className="max-w-4xl mx-auto text-center px-6">
+        <motion.h2
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-5xl font-bold gradient-text mb-8"
+        >
+          Explore Galleries
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-xl text-muted-foreground mb-12"
+        >
+          Discover amazing 3D art galleries created by artists worldwide
+        </motion.p>
+        
+        {/* Gallery Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <motion.div
+              key={item}
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: item * 0.1, duration: 0.6 }}
+              viewport={{ once: true }}
+              className="glass-card h-64 flex items-center justify-center"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-electric-blue to-cyber-purple rounded-xl mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold text-white mb-2">Gallery {item}</h3>
+                <p className="text-sm text-muted-foreground">Artist Name</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CreateSection() {
+  return (
+    <section className="min-h-screen flex items-center justify-center py-20">
+      <div className="max-w-4xl mx-auto text-center px-6">
+        <motion.h2
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-5xl font-bold gradient-text mb-8"
+        >
+          Create Your Gallery
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-xl text-muted-foreground mb-12"
+        >
+          Build stunning 3D galleries with our intuitive creation tools
+        </motion.p>
+        
+        {/* Creation Steps */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { step: 1, title: "Upload Artwork", desc: "Add your digital art pieces" },
+            { step: 2, title: "Choose Template", desc: "Select from stunning 3D environments" },
+            { step: 3, title: "Customize & Share", desc: "Personalize and publish your gallery" }
+          ].map((item) => (
+            <motion.div
+              key={item.step}
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: item.step * 0.2, duration: 0.8 }}
+              viewport={{ once: true }}
+              className="glass-card p-8"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-electric-blue to-cyber-purple rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-white">{item.step}</span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">{item.title}</h3>
+              <p className="text-muted-foreground">{item.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Main App Component
+export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState('home');
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'home':
+        return (
+          <>
+            <HeroSection setActiveSection={setActiveSection} />
+            <FeaturesSection />
+          </>
+        );
+      case 'explore':
+        return <ExploreSection />;
+      case 'create':
+        return <CreateSection />;
+      case 'features':
+        return <FeaturesSection />;
+      default:
+        return (
+          <>
+            <HeroSection setActiveSection={setActiveSection} />
+            <FeaturesSection />
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-deep-space text-white overflow-x-hidden">
+      {/* Loading Screen */}
+      <AnimatePresence>
+        {isLoading && (
+          <LoadingScreen onComplete={() => setIsLoading(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <AnimatePresence mode="wait">
+        {!isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            key="main-content"
+          >
+            {/* Navigation */}
+            <Navigation 
+              activeSection={activeSection} 
+              setActiveSection={setActiveSection} 
+            />
+
+            {/* Main Content */}
+            <main className="relative z-10">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeSection}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {renderSection()}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+
+            {/* Footer */}
+            <footer className="relative z-10 py-12 border-t border-white/10">
+              <div className="max-w-7xl mx-auto px-6 text-center">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8 }}
+                  viewport={{ once: true }}
+                >
+                  <h3 className="text-2xl font-bold gradient-text mb-4">
+                    Ultimate 3D Gallery
+                  </h3>
+                  <p className="text-muted-foreground mb-8">
+                    Transforming digital art into immersive experiences
+                  </p>
+                  <div className="flex justify-center space-x-8 text-sm text-muted-foreground">
+                    <a href="#" className="hover:text-electric-blue transition-colors">Privacy</a>
+                    <a href="#" className="hover:text-electric-blue transition-colors">Terms</a>
+                    <a href="#" className="hover:text-electric-blue transition-colors">Support</a>
+                    <a href="#" className="hover:text-electric-blue transition-colors">Contact</a>
+                  </div>
+                </motion.div>
+              </div>
+            </footer>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
