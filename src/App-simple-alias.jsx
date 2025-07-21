@@ -1,0 +1,293 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Gallery, 
+  Plus, 
+  Eye, 
+  BarChart3, 
+  Sparkles,
+  Clock,
+  Users
+} from 'lucide-react';
+
+import './App.css';
+
+function App() {
+  const [currentView, setCurrentView] = useState('home');
+
+  // Mock data for testing
+  const mockStatistics = {
+    totalGalleries: 5,
+    activeGalleries: 3,
+    totalVisits: 42,
+    totalRevenue: 1250
+  };
+
+  const mockGalleries = [
+    {
+      id: 1,
+      name: "Traditional Indian Art",
+      description: "A collection of classical Indian paintings",
+      artworks: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      visitCount: 15,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: 2,
+      name: "Modern Sculptures",
+      description: "Contemporary sculptural works",
+      artworks: [{ id: 4 }, { id: 5 }],
+      visitCount: 8,
+      expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ];
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const getTimeRemaining = (expiresAt) => {
+    const now = new Date().getTime();
+    const expiry = new Date(expiresAt).getTime();
+    const difference = expiry - now;
+
+    if (difference <= 0) return 'Expired';
+
+    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    return `${hours}h`;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div 
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => setCurrentView('home')}
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                <Gallery className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">3D Art Gallery</h1>
+                <p className="text-sm text-gray-600">Virtual Exhibition Experience</p>
+              </div>
+            </div>
+
+            <nav className="flex items-center gap-2">
+              <Button
+                variant={currentView === 'home' ? 'default' : 'ghost'}
+                onClick={() => setCurrentView('home')}
+                className="flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Home
+              </Button>
+              <Button
+                variant={currentView === 'create' ? 'default' : 'ghost'}
+                onClick={() => setCurrentView('create')}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Create
+              </Button>
+              <Button
+                variant={currentView === 'manage' ? 'default' : 'ghost'}
+                onClick={() => setCurrentView('manage')}
+                className="flex items-center gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                My Galleries
+              </Button>
+              <Button
+                variant={currentView === 'stats' ? 'default' : 'ghost'}
+                onClick={() => setCurrentView('stats')}
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Statistics
+              </Button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Home View */}
+        {currentView === 'home' && (
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center py-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl text-white">
+              <h2 className="text-4xl font-bold mb-4">Welcome to 3D Art Gallery</h2>
+              <p className="text-xl mb-8 opacity-90">
+                Create immersive virtual exhibitions featuring traditional Indian art forms
+              </p>
+              <div className="flex justify-center gap-4">
+                <Button 
+                  onClick={() => setCurrentView('create')}
+                  size="lg"
+                  className="bg-white text-purple-600 hover:bg-gray-100"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Your Gallery
+                </Button>
+                <Button 
+                  onClick={() => setCurrentView('manage')}
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-purple-600"
+                >
+                  <Eye className="w-5 h-5 mr-2" />
+                  View Galleries
+                </Button>
+              </div>
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <StatCard
+                title="Total Galleries"
+                value={mockStatistics.totalGalleries}
+                icon={Gallery}
+                color="blue"
+              />
+              <StatCard
+                title="Active Galleries"
+                value={mockStatistics.activeGalleries}
+                icon={Clock}
+                color="green"
+              />
+              <StatCard
+                title="Total Visits"
+                value={mockStatistics.totalVisits}
+                icon={Users}
+                color="purple"
+              />
+              <StatCard
+                title="Revenue"
+                value={formatCurrency(mockStatistics.totalRevenue)}
+                icon={BarChart3}
+                color="yellow"
+              />
+            </div>
+
+            {/* Recent Galleries */}
+            <div>
+              <h3 className="text-2xl font-bold mb-6">Recent Galleries</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mockGalleries.map((gallery) => (
+                  <GalleryCard
+                    key={gallery.id}
+                    gallery={gallery}
+                    onView={() => alert(`Viewing ${gallery.name}`)}
+                    getTimeRemaining={getTimeRemaining}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create View */}
+        {currentView === 'create' && (
+          <div className="text-center py-12">
+            <h2 className="text-3xl font-bold mb-4">Create New Gallery</h2>
+            <p className="text-gray-600 mb-8">Gallery creation interface will be implemented here</p>
+            <Button onClick={() => setCurrentView('home')}>Back to Home</Button>
+          </div>
+        )}
+
+        {/* Manage View */}
+        {currentView === 'manage' && (
+          <div className="text-center py-12">
+            <h2 className="text-3xl font-bold mb-4">Manage Galleries</h2>
+            <p className="text-gray-600 mb-8">Gallery management interface will be implemented here</p>
+            <Button onClick={() => setCurrentView('home')}>Back to Home</Button>
+          </div>
+        )}
+
+        {/* Statistics View */}
+        {currentView === 'stats' && (
+          <div className="text-center py-12">
+            <h2 className="text-3xl font-bold mb-4">Gallery Statistics</h2>
+            <p className="text-gray-600 mb-8">Detailed statistics will be shown here</p>
+            <Button onClick={() => setCurrentView('home')}>Back to Home</Button>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// Reusable Components
+function StatCard({ title, value, icon: Icon, color }) {
+  const colorClasses = {
+    blue: 'bg-blue-500',
+    green: 'bg-green-500',
+    purple: 'bg-purple-500',
+    yellow: 'bg-yellow-500'
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">{title}</p>
+            <p className="text-2xl font-bold">{value}</p>
+          </div>
+          <div className={`w-12 h-12 ${colorClasses[color]} rounded-lg flex items-center justify-center`}>
+            <Icon className="w-6 h-6 text-white" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GalleryCard({ gallery, onView, getTimeRemaining }) {
+  const timeRemaining = getTimeRemaining(gallery.expiresAt);
+  const isExpired = timeRemaining === 'Expired';
+
+  return (
+    <Card className={`overflow-hidden transition-all hover:shadow-lg ${isExpired ? 'opacity-75' : ''}`}>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{gallery.name}</CardTitle>
+            <CardDescription>{gallery.description}</CardDescription>
+          </div>
+          <Badge variant={isExpired ? 'destructive' : 'default'}>
+            {timeRemaining}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            <p>{gallery.artworks?.length || 0} artworks</p>
+            <p>{gallery.visitCount || 0} visits</p>
+          </div>
+          <Button onClick={onView} size="sm">
+            <Eye className="w-4 h-4 mr-1" />
+            View
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default App;
+

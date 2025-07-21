@@ -1,0 +1,29 @@
+{
+  "galleries": [],
+  "gallerySchema": {
+    "id": "string (uuid)",
+    "name": "string",
+    "description": "string",
+    "createdBy": "string (user name/email)",
+    "createdAt": "timestamp",
+    "expiresAt": "timestamp (24 hours from creation)",
+    "templateId": "string (reference to gallery template)",
+    "artworks": [
+      {
+        "artId": "string (reference to art piece)",
+        "position": {
+          "x": "number",
+          "y": "number", 
+          "z": "number"
+        },
+        "wall": "string (front/back/left/right)",
+        "sold": "boolean",
+        "soldAt": "timestamp (optional)"
+      }
+    ],
+    "isActive": "boolean",
+    "visitCount": "number",
+    "totalSales": "number"
+  }
+}
+
