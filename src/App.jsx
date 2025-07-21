@@ -168,7 +168,13 @@ function App() {
       <nav className="fixed top-0 left-0 right-0 z-40 glass-effect border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <img src="/logo-horizontal.png" alt="3D Art Gallery Logo" className="h-8" />
+            <div className="flex items-center space-x-3 nav-item">
+              <MorphingShape className="w-10 h-10" />
+              <div>
+                <h1 className="text-xl font-bold gradient-text">3D Art Gallery</h1>
+                <p className="text-xs text-gray-400">Interactive Experience</p>
+              </div>
+            </div>
 
             <div className="hidden md:flex items-center space-x-6">
               {['Home', 'Gallery', 'Create', 'Features', 'About'].map((item, index) => (
@@ -430,7 +436,10 @@ function App() {
       {/* Footer */}
       <footer className="py-20 border-t border-white/10 glass-effect">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <img src="/logo-horizontal.png" alt="3D Art Gallery Logo" className="h-8" />
+          <div className="flex items-center justify-center space-x-3 mb-6">
+            <MorphingShape className="w-8 h-8" />
+            <span className="text-xl font-bold gradient-text">3D Art Gallery</span>
+          </div>
           <p className="text-gray-400 mb-8">
             Transforming digital art into immersive experiences
           </p>
