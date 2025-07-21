@@ -22,14 +22,12 @@ export default function MobileNavigation({ currentView, setCurrentView }) {
     <>
       {/* Mobile Menu Toggle */}
       <div className="md:hidden">
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={() => setIsOpen(!isOpen)}
-          className="text-white hover:bg-white/10"
+          className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
         >
           {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </Button>
+        </button>
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -42,28 +40,27 @@ export default function MobileNavigation({ currentView, setCurrentView }) {
           />
           
           {/* Menu Panel */}
-          <div className="fixed top-0 right-0 h-full w-64 bg-black/95 backdrop-blur-xl border-l border-white/20 p-6">
-            {/* Close Button */}
-            <div className="flex justify-end mb-8">
-              <Button
-                variant="ghost"
-                size="sm"
+          <div className="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#1e1e3f]/95 backdrop-blur-xl border-l border-white/20 p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <img src="/logo-horizontal.png" alt="3D Art Gallery" className="h-6" />
+              <button
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/10"
+                className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
               >
                 <X className="h-6 w-6" />
-              </Button>
+              </button>
             </div>
 
             {/* Navigation Items */}
-            <nav className="space-y-4">
+            <nav className="space-y-2">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`block w-full text-left px-4 py-3 rounded-lg text-lg font-medium transition-colors ${
+                  className={`block w-full text-left px-4 py-3 rounded-lg text-base font-medium transition-all ${
                     currentView === item.id
-                      ? 'bg-purple-600 text-white'
+                      ? 'bg-[#6366f1] text-white shadow-lg'
                       : 'text-gray-300 hover:text-white hover:bg-white/10'
                   }`}
                 >
@@ -72,13 +69,13 @@ export default function MobileNavigation({ currentView, setCurrentView }) {
               ))}
               
               {/* Get Started Button */}
-              <div className="pt-4 border-t border-white/20">
-                <Button
+              <div className="pt-6 border-t border-white/20">
+                <button
                   onClick={() => handleNavClick('create')}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium"
+                  className="w-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-medium py-3 px-4 rounded-lg hover:shadow-lg transition-all"
                 >
                   Get Started
-                </Button>
+                </button>
               </div>
             </nav>
           </div>
