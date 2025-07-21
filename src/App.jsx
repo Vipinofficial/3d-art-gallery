@@ -1,393 +1,456 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Badge } from './components/ui/badge';
-import { Input } from './components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import GalleryCreator3D from './components/gallery/GalleryCreator3D';
-import GalleryManager from './components/gallery/GalleryManager';
-import GalleryViewer from './components/gallery/GalleryViewer';
-import dataManager from './lib/dataManager';
+import { Play, Palette, Zap, Globe, ArrowRight, Star, Users, Award, Eye } from 'lucide-react';
+
+// Import custom components
+import ThreeBackground from './components/ThreeBackground';
+import InteractiveGallery from './components/InteractiveGallery';
+import ParticleSystem from './components/ParticleSystem';
+import GalleryCreator from './components/GalleryCreator';
+import GalleryViewer from './components/GalleryViewer';
+import MobileNavigation from './components/MobileNavigation';
+import {
+  AnimatedCounter,
+  MagneticButton,
+  FloatingCard,
+  TextReveal,
+  MorphingShape,
+  ParallaxContainer,
+  GlitchText,
+  ScrollSection,
+  InteractiveTimeline
+} from './components/AnimatedSection';
+
+// Import GSAP hooks
+import {
+  useScrollAnimations,
+  useLoadingAnimation,
+  useHoverAnimations,
+  useScrollProgress,
+  useMagneticEffect
+} from './hooks/useGSAP';
 
 import './App.css';
 
 function App() {
   const [currentView, setCurrentView] = useState('home');
+  const [isLoading, setIsLoading] = useState(true);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [galleries, setGalleries] = useState([]);
-  const [statistics, setStatistics] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [sharedGalleryId, setSharedGalleryId] = useState(null);
+  const [selectedGallery, setSelectedGallery] = useState(null);
+  const heroRef = useRef();
 
-  // Check for shared gallery in URL on mount
+  // Initialize animations
+  useScrollAnimations();
+  useLoadingAnimation(isLoading);
+  useHoverAnimations();
+  useScrollProgress();
+  useMagneticEffect(heroRef, 0.1);
+
+  // Loading simulation
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const galleryId = urlParams.get('gallery');
-    
-    if (galleryId) {
-      setSharedGalleryId(galleryId);
-      setCurrentView('viewer');
-    }
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    // Load existing galleries from localStorage
+    const savedGalleries = JSON.parse(localStorage.getItem('galleries') || '[]');
+    setGalleries(savedGalleries);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  // Load data on component mount
+  // Gallery management functions
+  const handleGalleryCreated = (newGallery) => {
+    setGalleries(prev => [...prev, newGallery]);
+    setCurrentView('home');
+    // Show success message or redirect
+    alert('Gallery created successfully!');
+  };
+
+  const handleViewGallery = (gallery) => {
+    setSelectedGallery(gallery);
+    setCurrentView('viewer');
+  };
+
+  const handleCreateGallery = () => {
+    setCurrentView('create');
+  };
+
+  // Mouse tracking
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Initialize data manager
-        await dataManager.initializeData();
-        
-        // Load galleries and statistics
-        const userGalleries = dataManager.getAllGalleries();
-        const stats = dataManager.getStatistics();
-        
-        setGalleries(userGalleries);
-        setStatistics(stats);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setLoading(false);
-      }
+    const handleMouseMove = (e) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: -(e.clientY / window.innerHeight) * 2 + 1
+      });
     };
 
-    loadData();
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Refresh data when returning to home view
-  useEffect(() => {
-    if (currentView === 'home') {
-      const userGalleries = dataManager.getAllGalleries();
-      const stats = dataManager.getStatistics();
-      setGalleries(userGalleries);
-      setStatistics(stats);
+  const features = [
+    {
+      icon: <Palette className="w-8 h-8" />,
+      title: "Immersive 3D Galleries",
+      description: "Create stunning virtual art spaces with WebGL technology"
+    },
+    {
+      icon: <Zap className="w-8 h-8" />,
+      title: "Real-time Interactions",
+      description: "Engage visitors with dynamic animations and effects"
+    },
+    {
+      icon: <Globe className="w-8 h-8" />,
+      title: "Global Accessibility",
+      description: "Share your art with audiences worldwide instantly"
+    },
+    {
+      icon: <Eye className="w-8 h-8" />,
+      title: "Analytics Dashboard",
+      description: "Track visitor engagement and gallery performance"
     }
-  }, [currentView]);
+  ];
 
-  const handleGalleryCreated = () => {
-    // Refresh galleries after creation
-    const userGalleries = dataManager.getAllGalleries();
-    const stats = dataManager.getStatistics();
-    setGalleries(userGalleries);
-    setStatistics(stats);
-    setCurrentView('home');
-  };
-
-  const handleViewGallery = (galleryId) => {
-    // Record visit and open gallery
-    dataManager.recordGalleryVisit(galleryId);
-    
-    // Set shared gallery ID and switch to viewer
-    setSharedGalleryId(galleryId);
-    setCurrentView('viewer');
-    
-    // Update URL without page reload
-    const newUrl = `${window.location.origin}${window.location.pathname}?gallery=${galleryId}`;
-    window.history.pushState({ galleryId }, '', newUrl);
-    
-    // Refresh statistics
-    const stats = dataManager.getStatistics();
-    setStatistics(stats);
-  };
-
-  const handleCloseViewer = () => {
-    setSharedGalleryId(null);
-    setCurrentView('home');
-    
-    // Clear URL parameters
-    window.history.pushState({}, '', window.location.origin + window.location.pathname);
-  };
-
-  const generateShareableLink = (galleryId) => {
-    return `${window.location.origin}${window.location.pathname}?gallery=${galleryId}`;
-  };
-
-  const handleShareGallery = (galleryId) => {
-    const shareableLink = generateShareableLink(galleryId);
-    
-    if (navigator.share) {
-      // Use native sharing if available
-      navigator.share({
-        title: 'Check out this 3D Art Gallery',
-        text: 'View this amazing virtual art exhibition',
-        url: shareableLink
-      }).catch(console.error);
-    } else {
-      // Fallback to clipboard
-      navigator.clipboard.writeText(shareableLink).then(() => {
-        alert('Shareable link copied to clipboard!');
-      }).catch(() => {
-        // Fallback for older browsers
-        prompt('Copy this link to share:', shareableLink);
-      });
+  const timelineItems = [
+    {
+      title: "Upload Your Artwork",
+      description: "Simply drag and drop your digital art pieces"
+    },
+    {
+      title: "Choose Gallery Template",
+      description: "Select from our collection of stunning 3D environments"
+    },
+    {
+      title: "Customize Experience",
+      description: "Add interactive elements and animations"
+    },
+    {
+      title: "Share & Showcase",
+      description: "Publish your gallery and share with the world"
     }
-  };
+  ];
 
-  const formatTimeRemaining = (expiresAt) => {
-    const now = new Date();
-    const expiry = new Date(expiresAt);
-    const diff = expiry - now;
-    
-    if (diff <= 0) return 'Expired';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (days > 0) return `${days}d ${hours}h`;
-    return `${hours}h`;
-  };
+  const stats = [
+    { label: "Active Galleries", value: galleries.length, suffix: "" },
+    { label: "Artists Worldwide", value: 850, suffix: "+" },
+    { label: "Monthly Visitors", value: 45, suffix: "K+" },
+    { label: "Artworks Displayed", value: galleries.reduce((total, gallery) => total + (gallery.artworks?.length || 0), 0), suffix: "" }
+  ];
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="loading-screen">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading 3D Art Gallery...</p>
+          <div className="loading-spinner mb-6"></div>
+          <TextReveal className="text-2xl font-bold text-white mb-2">
+            3D Art Gallery
+          </TextReveal>
+          <p className="text-gray-400">Loading immersive experience...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+    <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
+      {/* Scroll Progress Indicator */}
+      <div className="scroll-indicator fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 z-50 scale-x-0"></div>
+
+      {/* Background Effects */}
+      <ThreeBackground />
+      <ParticleSystem />
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-40 glass-effect border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">3D</span>
-              </div>
+            <div className="flex items-center space-x-3 nav-item">
+              <MorphingShape className="w-10 h-10" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">3D Art Gallery</h1>
-                <p className="text-sm text-gray-600">Virtual Exhibition Experience</p>
+                <h1 className="text-xl font-bold gradient-text">3D Art Gallery</h1>
+                <p className="text-xs text-gray-400">Interactive Experience</p>
               </div>
             </div>
 
-            <nav className="flex items-center gap-2">
-              <Button
-                variant={currentView === 'home' ? 'default' : 'ghost'}
-                onClick={() => setCurrentView('home')}
-              >
-                Home
-              </Button>
-              <Button
-                variant={currentView === 'create' ? 'default' : 'ghost'}
-                onClick={() => setCurrentView('create')}
-              >
-                Create
-              </Button>
-              <Button
-                variant={currentView === 'manage' ? 'default' : 'ghost'}
-                onClick={() => setCurrentView('manage')}
-              >
-                Galleries
-              </Button>
-            </nav>
+            <div className="hidden md:flex items-center space-x-6">
+              {['Home', 'Gallery', 'Create', 'Features', 'About'].map((item, index) => (
+                <button
+                  key={item}
+                  className="nav-item text-sm font-medium text-gray-300 hover:text-white transition-colors relative group"
+                  onClick={() => setCurrentView(item.toLowerCase())}
+                >
+                  {item}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 group-hover:w-full transition-all duration-300"></span>
+                </button>
+              ))}
+              
+              <MagneticButton className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full font-medium hover-btn">
+                Get Started
+              </MagneticButton>
+            </div>
+
+            {/* Mobile Navigation */}
+            <MobileNavigation currentView={currentView} setCurrentView={setCurrentView} />
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Home View */}
+      <main className="pt-20">
         {currentView === 'home' && (
-          <div className="space-y-8">
+          <>
             {/* Hero Section */}
-            <div className="text-center py-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl text-white">
-              <h2 className="text-4xl font-bold mb-4">Welcome to 3D Art Gallery</h2>
-              <p className="text-xl mb-8 opacity-90">
-                Create immersive virtual exhibitions featuring your own artwork
-              </p>
-              <div className="flex justify-center gap-4">
-                <Button 
-                  onClick={() => setCurrentView('create')}
-                  size="lg"
-                  className="bg-white text-purple-600 hover:bg-gray-100"
-                >
-                  Create Your Gallery
-                </Button>
-                <Button 
-                  onClick={() => setCurrentView('manage')}
-                  size="lg"
-                  variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-purple-600"
-                >
-                  Manage Galleries
-                </Button>
-              </div>
-            </div>
+            <section ref={heroRef} className="min-h-screen flex items-center justify-center relative">
+              <div className="max-w-7xl mx-auto px-6 text-center hero-content">
+                <div className="mb-8">
+                  <TextReveal className="text-6xl md:text-8xl font-black mb-6">
+                    <GlitchText>Create</GlitchText> Stunning
+                  </TextReveal>
+                  <TextReveal className="text-6xl md:text-8xl font-black gradient-text mb-8">
+                    3D Art Galleries
+                  </TextReveal>
+                </div>
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Galleries</p>
-                      <p className="text-2xl font-bold">{statistics.totalGalleries || 0}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">G</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <ScrollSection animation="fadeIn" className="mb-12">
+                  <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                    Transform your digital artwork into immersive virtual exhibitions 
+                    with cutting-edge WebGL technology and interactive animations.
+                  </p>
+                </ScrollSection>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Active Galleries</p>
-                      <p className="text-2xl font-bold">{statistics.activeGalleries || 0}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">A</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Visits</p>
-                      <p className="text-2xl font-bold">{statistics.totalVisits || 0}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">V</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Revenue</p>
-                      <p className="text-2xl font-bold">
-                        {dataManager.formatCurrency(statistics.totalRevenue || 0)}
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">$</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* User Galleries */}
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold">Your Galleries</h3>
-                {galleries.length > 0 && (
-                  <Button 
-                    onClick={() => setCurrentView('manage')}
-                    variant="outline"
+                <ScrollSection animation="scaleUp" className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                  <MagneticButton 
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover-btn flex items-center gap-3"
+                    strength={0.5}
+                    onClick={handleCreateGallery}
                   >
-                    Manage All
-                  </Button>
-                )}
-              </div>
-              
-              {galleries.length === 0 ? (
-                <Card className="text-center py-12">
-                  <CardContent>
-                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <span className="text-gray-500 text-2xl">🎨</span>
-                    </div>
-                    <h4 className="text-lg font-semibold mb-2">No galleries yet</h4>
-                    <p className="text-gray-600 mb-4">
-                      Create your first 3D gallery to showcase your artwork
-                    </p>
-                    <Button onClick={() => setCurrentView('create')}>
-                      Create Your First Gallery
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {galleries.slice(0, 6).map((gallery) => (
-                    <Card 
-                      key={gallery.id} 
-                      className={`overflow-hidden transition-all hover:shadow-lg ${
-                        gallery.isExpired ? 'opacity-60' : ''
-                      }`}
-                    >
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{gallery.name}</CardTitle>
-                            <CardDescription>
-                              {gallery.template?.name || 'Custom Template'}
-                            </CardDescription>
-                          </div>
-                          <Badge variant={gallery.isExpired ? 'destructive' : 'default'}>
-                            {formatTimeRemaining(gallery.expiresAt)}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex justify-between items-center">
-                          <div className="text-sm text-gray-600">
-                            <p>{gallery.artworks?.length || 0} artworks</p>
-                            <p>{gallery.visitCount || 0} visits</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm"
-                              onClick={() => handleViewGallery(gallery.id)}
-                              disabled={gallery.isExpired}
-                            >
-                              View
-                            </Button>
-                            <Button 
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleShareGallery(gallery.id)}
-                            >
-                              Share
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <Play className="w-5 h-5" />
+                    Start Creating
+                  </MagneticButton>
+                  
+                  <MagneticButton 
+                    className="border border-white/20 text-white px-8 py-4 rounded-full text-lg font-semibold hover-btn glass-effect"
+                    onClick={() => setCurrentView('gallery')}
+                  >
+                    Explore Galleries
+                  </MagneticButton>
+                </ScrollSection>
+
+                {/* Floating Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 stagger-container">
+                  {stats.map((stat, index) => (
+                    <FloatingCard key={index} className="stagger-item text-center p-6 glass-effect rounded-2xl" delay={index * 0.2}>
+                      <div className="text-3xl font-bold gradient-text mb-2">
+                        <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+                      </div>
+                      <p className="text-gray-400 text-sm">{stat.label}</p>
+                    </FloatingCard>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+
+              {/* Scroll Indicator */}
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
+                  <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse"></div>
+                </div>
+              </div>
+            </section>
+
+            {/* Features Section */}
+            <ScrollSection className="py-32 relative">
+              <ParallaxContainer speed={0.3} className="absolute inset-0 opacity-20">
+                <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-pink-900/20"></div>
+              </ParallaxContainer>
+              
+              <div className="max-w-7xl mx-auto px-6 relative z-10">
+                <div className="text-center mb-20">
+                  <TextReveal className="text-5xl font-bold mb-6">
+                    Powerful Features
+                  </TextReveal>
+                  <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                    Everything you need to create professional virtual art exhibitions
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 stagger-container">
+                  {features.map((feature, index) => (
+                    <FloatingCard 
+                      key={index} 
+                      className="stagger-item p-8 glass-effect rounded-2xl text-center group"
+                      delay={index * 0.1}
+                    >
+                      <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300">
+                        {feature.icon}
+                      </div>
+                      <h3 className="text-xl font-semibold mb-4 text-white">{feature.title}</h3>
+                      <p className="text-gray-400 leading-relaxed">{feature.description}</p>
+                    </FloatingCard>
+                  ))}
+                </div>
+              </div>
+            </ScrollSection>
+
+            {/* How It Works Section */}
+            <ScrollSection className="py-32 bg-gradient-to-br from-purple-900/10 to-pink-900/10">
+              <div className="max-w-7xl mx-auto px-6">
+                <div className="text-center mb-20">
+                  <TextReveal className="text-5xl font-bold mb-6">
+                    How It Works
+                  </TextReveal>
+                  <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                    Create your virtual gallery in just four simple steps
+                  </p>
+                </div>
+
+                <div className="max-w-4xl mx-auto">
+                  <InteractiveTimeline items={timelineItems} />
+                </div>
+              </div>
+            </ScrollSection>
+
+            {/* CTA Section */}
+            <ScrollSection className="py-32 text-center">
+              <div className="max-w-4xl mx-auto px-6">
+                <TextReveal className="text-5xl font-bold mb-8">
+                  Ready to Showcase Your Art?
+                </TextReveal>
+                <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+                  Join thousands of artists who are already creating stunning virtual galleries
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                  <MagneticButton 
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-4 rounded-full text-lg font-semibold hover-btn flex items-center gap-3 mx-auto sm:mx-0"
+                    strength={0.5}
+                    onClick={handleCreateGallery}
+                  >
+                    Create Your Gallery
+                    <ArrowRight className="w-5 h-5" />
+                  </MagneticButton>
+                </div>
+              </div>
+            </ScrollSection>
+          </>
         )}
 
-        {/* Create View */}
+        {currentView === 'gallery' && (
+          <section className="min-h-screen">
+            {selectedGallery ? (
+              <GalleryViewer 
+                gallery={selectedGallery}
+                onClose={() => {
+                  setSelectedGallery(null);
+                  setCurrentView('gallery');
+                }}
+              />
+            ) : galleries.length > 0 ? (
+              <div className="py-20">
+                <div className="max-w-7xl mx-auto px-6">
+                  <div className="text-center mb-12">
+                    <h2 className="text-4xl font-bold mb-4">Gallery Collection</h2>
+                    <p className="text-xl text-gray-300">Explore amazing virtual art galleries</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {galleries.map((gallery) => (
+                      <FloatingCard key={gallery.id} className="p-6 glass-effect rounded-xl cursor-pointer" onClick={() => handleViewGallery(gallery)}>
+                        <div className="aspect-video bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg mb-4 flex items-center justify-center">
+                          <span className="text-white font-semibold">Gallery Preview</span>
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2 text-white">{gallery.name}</h3>
+                        <p className="text-gray-400 text-sm mb-3">{gallery.description}</p>
+                        <div className="flex justify-between items-center">
+                          <Badge>{gallery.artworks?.length || 0} artworks</Badge>
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); handleViewGallery(gallery); }}>
+                            View Gallery
+                          </Button>
+                        </div>
+                      </FloatingCard>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <InteractiveGallery 
+                onArtworkClick={(artwork) => console.log('Clicked artwork:', artwork)}
+              />
+            )}
+          </section>
+        )}
+
         {currentView === 'create' && (
-          <GalleryCreator3D onGalleryCreated={handleGalleryCreated} />
+          <section className="min-h-screen py-20">
+            <GalleryCreator onGalleryCreated={handleGalleryCreated} />
+          </section>
         )}
 
-        {/* Gallery Viewer */}
-        {currentView === 'viewer' && sharedGalleryId && (
-          <GalleryViewer 
-            galleryId={sharedGalleryId}
-            onClose={handleCloseViewer}
-          />
-        )}
+        {currentView === 'features' && (
+          <ScrollSection className="py-32">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="text-center mb-20">
+                <TextReveal className="text-5xl font-bold mb-6">
+                  Advanced Features
+                </TextReveal>
+                <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                  Discover all the powerful tools at your disposal
+                </p>
+              </div>
 
-        {/* Manage View */}
-        {currentView === 'manage' && (
-          <GalleryManager 
-            galleries={galleries}
-            onGalleryUpdate={() => {
-              const userGalleries = dataManager.getAllGalleries();
-              const stats = dataManager.getStatistics();
-              setGalleries(userGalleries);
-              setStatistics(stats);
-            }}
-            onViewGallery={handleViewGallery}
-            onShareGallery={handleShareGallery}
-          />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div className="space-y-8">
+                  {features.map((feature, index) => (
+                    <FloatingCard key={index} className="p-6 glass-effect rounded-xl" delay={index * 0.1}>
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white flex-shrink-0">
+                          {feature.icon}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold mb-2 text-white">{feature.title}</h3>
+                          <p className="text-gray-400">{feature.description}</p>
+                        </div>
+                      </div>
+                    </FloatingCard>
+                  ))}
+                </div>
+
+                <div className="relative">
+                  <FloatingCard className="aspect-square glass-effect rounded-2xl p-8 flex items-center justify-center">
+                    <div className="text-center">
+                      <MorphingShape className="w-32 h-32 mx-auto mb-6" />
+                      <h3 className="text-2xl font-bold text-white mb-4">Interactive Demo</h3>
+                      <p className="text-gray-400">Experience the power of 3D galleries</p>
+                    </div>
+                  </FloatingCard>
+                </div>
+              </div>
+            </div>
+          </ScrollSection>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="py-20 border-t border-white/10 glass-effect">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="flex items-center justify-center space-x-3 mb-6">
+            <MorphingShape className="w-8 h-8" />
+            <span className="text-xl font-bold gradient-text">3D Art Gallery</span>
+          </div>
+          <p className="text-gray-400 mb-8">
+            Transforming digital art into immersive experiences
+          </p>
+          <div className="flex justify-center space-x-8 text-sm text-gray-400">
+            <a href="#" className="hover:text-white transition-colors">Privacy</a>
+            <a href="#" className="hover:text-white transition-colors">Terms</a>
+            <a href="#" className="hover:text-white transition-colors">Support</a>
+            <a href="#" className="hover:text-white transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
