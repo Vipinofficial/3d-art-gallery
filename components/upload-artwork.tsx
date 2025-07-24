@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Upload, Link, X, ImageIcon, AlertTriangle, LogOut } from "lucide-react"
 import { useSecurity } from "@/components/security-provider"
 import { dataStore } from "@/lib/data-store"
-import { fileManager } from "@/lib/file-manager"
+import { fileSystem } from "@/lib/file-system"
 import { TermsConditions } from "@/components/terms-conditions"
 
 interface UploadArtworkProps {
@@ -38,17 +38,32 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [userGallery, setUserGallery] = useState<any>(null)
+  const [galleryArtworks, setGalleryArtworks] = useState<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { sanitizeInput } = useSecurity()
 
-  const userGallery = dataStore.getUserGallery(user.id)
-  const galleryArtworks = userGallery ? dataStore.getArtworksByGallery(userGallery.id) : []
   const maxArtworks = 6
+
+  // Load user gallery and artworks
+  React.useEffect(() => {
+    const loadGalleryData = async () => {
+      const gallery = await dataStore.getUserGallery(user.id)
+      setUserGallery(gallery)
+
+      if (gallery) {
+        const artworks = await dataStore.getArtworksByGallery(gallery.id)
+        setGalleryArtworks(artworks)
+      }
+    }
+
+    loadGalleryData()
+  }, [user.id])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const validation = fileManager.validateFile(file)
+      const validation = fileSystem.validateFile(file)
       if (!validation.isValid) {
         alert(validation.error)
         return
@@ -109,8 +124,8 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
       let fileName = ""
 
       if (uploadMethod === "file" && selectedFile) {
-        // Upload file to gallery folder
-        const uploadResult = await fileManager.uploadFile(selectedFile, userGallery.name, userGallery.id)
+        // Upload file to server
+        const uploadResult = await fileSystem.uploadFile(selectedFile, userGallery.name, userGallery.id)
 
         if (!uploadResult.success) {
           alert(uploadResult.error || "Upload failed")
@@ -118,7 +133,7 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
         }
 
         finalImageUrl = uploadResult.filePath || ""
-        fileName = fileManager.generateFileName(selectedFile.name, userGallery.id)
+        fileName = uploadResult.fileName || ""
       } else {
         // Use provided URL
         finalImageUrl = sanitizedData.imageUrl || imageSource
@@ -140,11 +155,11 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
         fileName: uploadMethod === "file" ? fileName : undefined,
       }
 
-      dataStore.addArtwork(newArtwork)
+      await dataStore.addArtwork(newArtwork)
 
       // Update gallery adult content flag if needed
       if (hasAdultContent && !userGallery.hasAdultContent) {
-        dataStore.updateGallery(userGallery.id, { hasAdultContent: true })
+        await dataStore.updateGallery(userGallery.id, { hasAdultContent: true })
       }
 
       // Reset form

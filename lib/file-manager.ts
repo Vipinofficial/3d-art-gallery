@@ -12,6 +12,38 @@ const defaultConfig: FileManagerConfig = {
   baseUploadPath: "/uploads/galleries",
 }
 
+// Helper function to check if we're in the browser
+const isBrowser = () => typeof window !== "undefined"
+
+// Helper function to safely access localStorage
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (!isBrowser()) return null
+    try {
+      return localStorage.getItem(key)
+    } catch (error) {
+      console.warn("localStorage access failed:", error)
+      return null
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (!isBrowser()) return
+    try {
+      localStorage.setItem(key, value)
+    } catch (error) {
+      console.warn("localStorage write failed:", error)
+    }
+  },
+  removeItem: (key: string): void => {
+    if (!isBrowser()) return
+    try {
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.warn("localStorage remove failed:", error)
+    }
+  },
+}
+
 class FileManager {
   private config: FileManagerConfig
 
@@ -94,6 +126,8 @@ class FileManager {
 
   // Store file information locally (for demo purposes)
   private storeFileInfo(galleryId: string, galleryName: string, fileName: string, filePath: string, file: File) {
+    if (!isBrowser()) return
+
     const fileInfo = {
       galleryId,
       galleryName,
@@ -106,29 +140,38 @@ class FileManager {
     }
 
     // Get existing files
-    const existingFiles = JSON.parse(localStorage.getItem("artverse_files") || "[]")
+    const existingFilesStr = safeLocalStorage.getItem("artverse_files")
+    const existingFiles = existingFilesStr ? JSON.parse(existingFilesStr) : []
     existingFiles.push(fileInfo)
 
     // Store updated files list
-    localStorage.setItem("artverse_files", JSON.stringify(existingFiles))
+    safeLocalStorage.setItem("artverse_files", JSON.stringify(existingFiles))
   }
 
   // Get files for a gallery
   getGalleryFiles(galleryId: string): any[] {
-    const files = JSON.parse(localStorage.getItem("artverse_files") || "[]")
+    if (!isBrowser()) return []
+
+    const filesStr = safeLocalStorage.getItem("artverse_files")
+    const files = filesStr ? JSON.parse(filesStr) : []
     return files.filter((file: any) => file.galleryId === galleryId)
   }
 
   // Delete gallery folder and all its files
   async deleteGalleryFolder(galleryId: string, galleryName: string): Promise<{ success: boolean; error?: string }> {
+    if (!isBrowser()) {
+      return { success: true } // Skip deletion during SSR
+    }
+
     try {
       // Get all files for this gallery
-      const allFiles = JSON.parse(localStorage.getItem("artverse_files") || "[]")
+      const allFilesStr = safeLocalStorage.getItem("artverse_files")
+      const allFiles = allFilesStr ? JSON.parse(allFilesStr) : []
       const galleryFiles = allFiles.filter((file: any) => file.galleryId === galleryId)
 
       // Remove gallery files from storage
       const remainingFiles = allFiles.filter((file: any) => file.galleryId !== galleryId)
-      localStorage.setItem("artverse_files", JSON.stringify(remainingFiles))
+      safeLocalStorage.setItem("artverse_files", JSON.stringify(remainingFiles))
 
       // In a real application, you would:
       // 1. Delete all files in the gallery folder
@@ -146,11 +189,16 @@ class FileManager {
 
   // Delete specific file
   async deleteFile(galleryId: string, fileName: string): Promise<{ success: boolean; error?: string }> {
+    if (!isBrowser()) {
+      return { success: true } // Skip deletion during SSR
+    }
+
     try {
-      const allFiles = JSON.parse(localStorage.getItem("artverse_files") || "[]")
+      const allFilesStr = safeLocalStorage.getItem("artverse_files")
+      const allFiles = allFilesStr ? JSON.parse(allFilesStr) : []
       const updatedFiles = allFiles.filter((file: any) => !(file.galleryId === galleryId && file.fileName === fileName))
 
-      localStorage.setItem("artverse_files", JSON.stringify(updatedFiles))
+      safeLocalStorage.setItem("artverse_files", JSON.stringify(updatedFiles))
 
       return { success: true }
     } catch (error) {
@@ -160,7 +208,12 @@ class FileManager {
 
   // Get storage statistics
   getStorageStats(): { totalFiles: number; totalSize: number; galleriesCount: number } {
-    const files = JSON.parse(localStorage.getItem("artverse_files") || "[]")
+    if (!isBrowser()) {
+      return { totalFiles: 0, totalSize: 0, galleriesCount: 0 }
+    }
+
+    const filesStr = safeLocalStorage.getItem("artverse_files")
+    const files = filesStr ? JSON.parse(filesStr) : []
     const totalFiles = files.length
     const totalSize = files.reduce((sum: number, file: any) => sum + (file.size || 0), 0)
     const galleriesCount = new Set(files.map((file: any) => file.galleryId)).size
@@ -169,4 +222,15 @@ class FileManager {
   }
 }
 
-export const fileManager = new FileManager()
+// Create a singleton instance
+let fileManagerInstance: FileManager | null = null
+
+export const getFileManager = (): FileManager => {
+  if (!fileManagerInstance) {
+    fileManagerInstance = new FileManager()
+  }
+  return fileManagerInstance
+}
+
+// Export the instance for backward compatibility
+export const fileManager = getFileManager()

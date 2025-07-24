@@ -1,7 +1,5 @@
 "use client"
 
-import { fileManager } from "./file-manager"
-
 export interface Artwork {
   id: string
   title: string
@@ -17,7 +15,7 @@ export interface Artwork {
   hasAdultContent: boolean
   createdAt: string
   galleryId: string
-  fileName?: string // Added for file tracking
+  fileName?: string
 }
 
 export interface Gallery {
@@ -54,7 +52,7 @@ const defaultGalleries: Gallery[] = [
     owner: "Alex Chen",
     ownerId: "user-1",
     description: "A collection of futuristic digital artworks exploring the boundaries between reality and imagination",
-    artworkCount: 6,
+    artworkCount: 3,
     totalViews: 1234,
     totalLikes: 89,
     thumbnail: "/placeholder.svg?height=300&width=400&text=Digital+Dreams",
@@ -69,7 +67,7 @@ const defaultGalleries: Gallery[] = [
     owner: "Maya Rodriguez",
     ownerId: "user-2",
     description: "Beautiful landscapes and natural scenes captured through digital artistry",
-    artworkCount: 4,
+    artworkCount: 2,
     totalViews: 856,
     totalLikes: 67,
     thumbnail: "/placeholder.svg?height=300&width=400&text=Nature+Canvas",
@@ -84,7 +82,7 @@ const defaultGalleries: Gallery[] = [
     owner: "David Kim",
     ownerId: "user-3",
     description: "Street art and city life captured in vibrant digital form",
-    artworkCount: 5,
+    artworkCount: 2,
     totalViews: 2103,
     totalLikes: 156,
     thumbnail: "/placeholder.svg?height=300&width=400&text=Urban+Art",
@@ -93,26 +91,10 @@ const defaultGalleries: Gallery[] = [
     createdAt: "2024-01-05T14:00:00Z",
     updatedAt: "2024-01-22T09:15:00Z",
   },
-  {
-    id: "gallery-4",
-    name: "Abstract Minds",
-    owner: "Sarah Johnson",
-    ownerId: "user-4",
-    description: "Exploring the boundaries of abstract digital art and consciousness",
-    artworkCount: 3,
-    totalViews: 743,
-    totalLikes: 45,
-    thumbnail: "/placeholder.svg?height=300&width=400&text=Abstract+Art",
-    isPublic: true,
-    hasAdultContent: false,
-    createdAt: "2024-01-12T16:00:00Z",
-    updatedAt: "2024-01-19T11:45:00Z",
-  },
 ]
 
 // Default artworks for the galleries
 const defaultArtworks: Artwork[] = [
-  // Gallery 1 - Digital Dreams
   {
     id: "art-1",
     title: "Cyber Metropolis",
@@ -161,7 +143,6 @@ const defaultArtworks: Artwork[] = [
     createdAt: "2024-01-17T09:15:00Z",
     galleryId: "gallery-1",
   },
-  // Gallery 2 - Nature's Canvas
   {
     id: "art-4",
     title: "Mountain Serenity",
@@ -194,7 +175,6 @@ const defaultArtworks: Artwork[] = [
     createdAt: "2024-01-13T11:00:00Z",
     galleryId: "gallery-2",
   },
-  // Gallery 3 - Urban Expressions
   {
     id: "art-6",
     title: "Street Symphony",
@@ -233,42 +213,83 @@ class DataStore {
   private galleries: Gallery[] = []
   private artworks: Artwork[] = []
   private users: User[] = []
+  private initialized = false
 
   constructor() {
-    this.loadData()
+    this.initializeData()
   }
 
-  private loadData() {
-    // Load from localStorage or use defaults
-    const savedGalleries = localStorage.getItem("artverse_galleries")
-    const savedArtworks = localStorage.getItem("artverse_artworks")
-    const savedUsers = localStorage.getItem("artverse_users")
-
-    this.galleries = savedGalleries ? JSON.parse(savedGalleries) : [...defaultGalleries]
-    this.artworks = savedArtworks ? JSON.parse(savedArtworks) : [...defaultArtworks]
-    this.users = savedUsers ? JSON.parse(savedUsers) : []
+  private async initializeData() {
+    if (this.initialized) return
+    await this.loadData()
+    this.initialized = true
   }
 
-  private saveData() {
-    localStorage.setItem("artverse_galleries", JSON.stringify(this.galleries))
-    localStorage.setItem("artverse_artworks", JSON.stringify(this.artworks))
-    localStorage.setItem("artverse_users", JSON.stringify(this.users))
+  private async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initializeData()
+    }
+  }
+
+  private async loadData() {
+    try {
+      // Load data from server
+      const response = await fetch("/api/data")
+      if (response.ok) {
+        const data = await response.json()
+        this.galleries = data.galleries || [...defaultGalleries]
+        this.artworks = data.artworks || [...defaultArtworks]
+        this.users = data.users || []
+      } else {
+        // Use default data if server request fails
+        this.galleries = [...defaultGalleries]
+        this.artworks = [...defaultArtworks]
+        this.users = []
+      }
+    } catch (error) {
+      console.warn("Failed to load data from server, using defaults:", error)
+      this.galleries = [...defaultGalleries]
+      this.artworks = [...defaultArtworks]
+      this.users = []
+    }
+  }
+
+  private async saveData() {
+    try {
+      await fetch("/api/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          galleries: this.galleries,
+          artworks: this.artworks,
+          users: this.users,
+        }),
+      })
+    } catch (error) {
+      console.warn("Failed to save data to server:", error)
+    }
   }
 
   // Gallery methods
-  getAllGalleries(): Gallery[] {
+  async getAllGalleries(): Promise<Gallery[]> {
+    await this.ensureInitialized()
     return this.galleries.filter((g) => g.isPublic)
   }
 
-  getGalleryById(id: string): Gallery | undefined {
+  async getGalleryById(id: string): Promise<Gallery | undefined> {
+    await this.ensureInitialized()
     return this.galleries.find((g) => g.id === id)
   }
 
-  getUserGallery(userId: string): Gallery | undefined {
+  async getUserGallery(userId: string): Promise<Gallery | undefined> {
+    await this.ensureInitialized()
     return this.galleries.find((g) => g.ownerId === userId)
   }
 
-  createGallery(gallery: Omit<Gallery, "id" | "createdAt" | "updatedAt">): Gallery {
+  async createGallery(gallery: Omit<Gallery, "id" | "createdAt" | "updatedAt">): Promise<Gallery> {
+    await this.ensureInitialized()
     const newGallery: Gallery = {
       ...gallery,
       id: `gallery-${Date.now()}`,
@@ -276,11 +297,12 @@ class DataStore {
       updatedAt: new Date().toISOString(),
     }
     this.galleries.push(newGallery)
-    this.saveData()
+    await this.saveData()
     return newGallery
   }
 
-  updateGallery(id: string, updates: Partial<Gallery>): Gallery | null {
+  async updateGallery(id: string, updates: Partial<Gallery>): Promise<Gallery | null> {
+    await this.ensureInitialized()
     const index = this.galleries.findIndex((g) => g.id === id)
     if (index === -1) return null
 
@@ -289,34 +311,18 @@ class DataStore {
       ...updates,
       updatedAt: new Date().toISOString(),
     }
-    this.saveData()
+    await this.saveData()
     return this.galleries[index]
   }
 
-  // Enhanced delete gallery method with file cleanup
   async deleteGallery(id: string): Promise<{ success: boolean; error?: string }> {
+    await this.ensureInitialized()
     const gallery = this.galleries.find((g) => g.id === id)
     if (!gallery) {
       return { success: false, error: "Gallery not found" }
     }
 
     try {
-      // Delete all artworks in the gallery first
-      const galleryArtworks = this.artworks.filter((a) => a.galleryId === id)
-
-      // Delete individual artwork files
-      for (const artwork of galleryArtworks) {
-        if (artwork.fileName) {
-          await fileManager.deleteFile(id, artwork.fileName)
-        }
-      }
-
-      // Delete the entire gallery folder
-      const folderDeletion = await fileManager.deleteGalleryFolder(id, gallery.name)
-      if (!folderDeletion.success) {
-        console.warn("Failed to delete gallery folder:", folderDeletion.error)
-      }
-
       // Remove artworks from data store
       this.artworks = this.artworks.filter((a) => a.galleryId !== id)
 
@@ -330,7 +336,7 @@ class DataStore {
         delete user.galleryId
       }
 
-      this.saveData()
+      await this.saveData()
       return { success: true }
     } catch (error) {
       return { success: false, error: "Failed to delete gallery" }
@@ -338,15 +344,18 @@ class DataStore {
   }
 
   // Artwork methods
-  getArtworksByGallery(galleryId: string): Artwork[] {
+  async getArtworksByGallery(galleryId: string): Promise<Artwork[]> {
+    await this.ensureInitialized()
     return this.artworks.filter((a) => a.galleryId === galleryId)
   }
 
-  getArtworkById(id: string): Artwork | undefined {
+  async getArtworkById(id: string): Promise<Artwork | undefined> {
+    await this.ensureInitialized()
     return this.artworks.find((a) => a.id === id)
   }
 
-  addArtwork(artwork: Omit<Artwork, "id" | "createdAt">): Artwork {
+  async addArtwork(artwork: Omit<Artwork, "id" | "createdAt">): Promise<Artwork> {
+    await this.ensureInitialized()
     const newArtwork: Artwork = {
       ...artwork,
       id: `art-${Date.now()}`,
@@ -357,104 +366,95 @@ class DataStore {
     // Update gallery artwork count
     const gallery = this.galleries.find((g) => g.id === artwork.galleryId)
     if (gallery) {
-      gallery.artworkCount = this.getArtworksByGallery(artwork.galleryId).length + 1
+      gallery.artworkCount = this.artworks.filter((a) => a.galleryId === artwork.galleryId).length
       gallery.updatedAt = new Date().toISOString()
     }
 
-    this.saveData()
+    await this.saveData()
     return newArtwork
   }
 
-  // Enhanced remove artwork method with file cleanup
   async removeArtwork(id: string): Promise<{ success: boolean; error?: string }> {
+    await this.ensureInitialized()
     const artwork = this.artworks.find((a) => a.id === id)
     if (!artwork) {
       return { success: false, error: "Artwork not found" }
     }
 
     try {
-      // Delete the artwork file if it exists
-      if (artwork.fileName) {
-        const fileDeletion = await fileManager.deleteFile(artwork.galleryId, artwork.fileName)
-        if (!fileDeletion.success) {
-          console.warn("Failed to delete artwork file:", fileDeletion.error)
-        }
-      }
-
       // Remove artwork from data store
       this.artworks = this.artworks.filter((a) => a.id !== id)
 
       // Update gallery artwork count
       const gallery = this.galleries.find((g) => g.id === artwork.galleryId)
       if (gallery) {
-        gallery.artworkCount = this.getArtworksByGallery(artwork.galleryId).length
+        gallery.artworkCount = this.artworks.filter((a) => a.galleryId === artwork.galleryId).length
         gallery.updatedAt = new Date().toISOString()
       }
 
-      this.saveData()
+      await this.saveData()
       return { success: true }
     } catch (error) {
       return { success: false, error: "Failed to delete artwork" }
     }
   }
 
-  updateArtwork(id: string, updates: Partial<Artwork>): Artwork | null {
+  async updateArtwork(id: string, updates: Partial<Artwork>): Promise<Artwork | null> {
+    await this.ensureInitialized()
     const index = this.artworks.findIndex((a) => a.id === id)
     if (index === -1) return null
 
     this.artworks[index] = { ...this.artworks[index], ...updates }
-    this.saveData()
+    await this.saveData()
     return this.artworks[index]
   }
 
   // User methods
-  createUser(user: Omit<User, "id" | "createdAt">): User {
+  async createUser(user: Omit<User, "id" | "createdAt">): Promise<User> {
+    await this.ensureInitialized()
     const newUser: User = {
       ...user,
       id: `user-${Date.now()}`,
       createdAt: new Date().toISOString(),
     }
     this.users.push(newUser)
-    this.saveData()
+    await this.saveData()
     return newUser
   }
 
-  getUserByEmail(email: string): User | undefined {
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    await this.ensureInitialized()
     return this.users.find((u) => u.email === email)
   }
 
-  updateUser(id: string, updates: Partial<User>): User | null {
+  async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+    await this.ensureInitialized()
     const index = this.users.findIndex((u) => u.id === id)
     if (index === -1) return null
 
     this.users[index] = { ...this.users[index], ...updates }
-    this.saveData()
+    await this.saveData()
     return this.users[index]
   }
 
-  // Like artwork
-  likeArtwork(artworkId: string): boolean {
+  async likeArtwork(artworkId: string): Promise<boolean> {
+    await this.ensureInitialized()
     const artwork = this.artworks.find((a) => a.id === artworkId)
     if (!artwork) return false
 
     artwork.likes += 1
-    this.saveData()
+    await this.saveData()
     return true
   }
 
-  // View artwork
-  viewArtwork(artworkId: string): boolean {
+  async viewArtwork(artworkId: string): Promise<boolean> {
+    await this.ensureInitialized()
     const artwork = this.artworks.find((a) => a.id === artworkId)
     if (!artwork) return false
 
     artwork.views += 1
-    this.saveData()
+    await this.saveData()
     return true
-  }
-
-  // Get storage statistics
-  getStorageStats() {
-    return fileManager.getStorageStats()
   }
 }
 

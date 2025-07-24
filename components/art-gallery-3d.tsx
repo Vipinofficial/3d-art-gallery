@@ -1,126 +1,185 @@
 "use client"
 
-import { Canvas } from "@react-three/fiber"
-import { Environment, OrbitControls } from "@react-three/drei"
 import { Suspense, useState, useEffect } from "react"
-import { ModernGallery } from "@/components/modern-gallery"
-import { GalleryUI } from "@/components/gallery-ui"
-import { LoadingScreen } from "@/components/loading-screen"
-import { dataStore, type Artwork } from "@/lib/data-store"
+import { Canvas } from "@react-three/fiber"
+import { OrbitControls, Environment, Html } from "@react-three/drei"
+import { ModernGallery } from "./modern-gallery"
+import { CreatorPortal } from "./creator-portal"
+import { CheckoutPage } from "./checkout-page"
+import { LoadingScreen } from "./loading-screen"
+import { GalleryUI } from "./gallery-ui"
+import { dataStore, type Gallery as GalleryType, type Artwork } from "@/lib/data-store"
 
 interface ArtGallery3DProps {
+  selectedGallery: GalleryType | null
+  onBack: () => void
   user: any
-  gallery: any
-  onBackToGalleries: () => void
-  onCheckout: (items: any[]) => void
-  onLogout: () => void
-  onOpenDashboard: () => void
 }
 
-export function ArtGallery3D({
-  user,
-  gallery,
-  onBackToGalleries,
-  onCheckout,
-  onLogout,
-  onOpenDashboard,
-}: ArtGallery3DProps) {
-  const [selectedArtwork, setSelectedArtwork] = useState<any>(null)
-  const [cart, setCart] = useState<any[]>([])
-  const [galleryArtworks, setGalleryArtworks] = useState<Artwork[]>([])
+export function ArtGallery3D({ selectedGallery, onBack, user }: ArtGallery3DProps) {
+  const [currentView, setCurrentView] = useState<"gallery" | "creator" | "checkout">("gallery")
+  const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null)
+  const [artworks, setArtworks] = useState<Artwork[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load artworks for this gallery
-    const artworks = dataStore.getArtworksByGallery(gallery.id)
+    if (selectedGallery) {
+      loadArtworks()
+    }
+  }, [selectedGallery])
 
-    // Add position data for 3D display
-    const positions = [
-      [-4, 1.5, -2.9],
-      [0, 1.5, -2.9],
-      [4, 1.5, -2.9],
-      [-2, 1.5, 2.9],
-      [2, 1.5, 2.9],
-      [0, 1.5, 5.9],
-    ]
+  const loadArtworks = async () => {
+    if (!selectedGallery) return
 
-    const artworksWithPositions = artworks.map((artwork, index) => ({
-      ...artwork,
-      position: positions[index] || [0, 1.5, 0],
-    }))
-
-    setGalleryArtworks(artworksWithPositions)
-  }, [gallery.id])
-
-  const addToCart = (artwork: any) => {
-    setCart((prev) => [...prev, artwork])
+    try {
+      const galleryArtworks = await dataStore.getArtworksByGallery(selectedGallery.id)
+      setArtworks(galleryArtworks)
+    } catch (error) {
+      console.error("Failed to load artworks:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const likeArtwork = (artworkId: string) => {
-    dataStore.likeArtwork(artworkId)
-    // Update local state
-    setGalleryArtworks((prev) => prev.map((art) => (art.id === artworkId ? { ...art, likes: art.likes + 1 } : art)))
+  const handleAddArtwork = async (newArtwork: any) => {
+    if (!selectedGallery) return
+
+    try {
+      const artwork = await dataStore.addArtwork({
+        ...newArtwork,
+        artist: user.name,
+        artistId: user.id,
+        likes: 0,
+        views: 0,
+        sales: 0,
+        hasAdultContent: false,
+        galleryId: selectedGallery.id,
+      })
+
+      await loadArtworks() // Reload artworks
+    } catch (error) {
+      console.error("Failed to add artwork:", error)
+    }
   }
 
-  const viewArtwork = (artwork: any) => {
-    dataStore.viewArtwork(artwork.id)
+  const handleArtworkSelect = (artwork: Artwork) => {
     setSelectedArtwork(artwork)
+    setCurrentView("checkout")
   }
 
-  const isOwner = user.id === gallery.ownerId
+  const handleLikeArtwork = async (artworkId: string) => {
+    try {
+      await dataStore.likeArtwork(artworkId)
+      await loadArtworks() // Reload to get updated likes
+    } catch (error) {
+      console.error("Failed to like artwork:", error)
+    }
+  }
+
+  const handleViewArtwork = async (artworkId: string) => {
+    try {
+      await dataStore.viewArtwork(artworkId)
+      await loadArtworks() // Reload to get updated views
+    } catch (error) {
+      console.error("Failed to record view:", error)
+    }
+  }
+
+  if (loading) {
+    return <LoadingScreen />
+  }
+
+  if (!selectedGallery) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Gallery Selected</h2>
+          <button
+            onClick={onBack}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Back to Galleries
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="w-full h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black">
-      <Canvas camera={{ position: [0, 2, 8], fov: 60 }} shadows gl={{ antialias: true }}>
-        <Suspense fallback={null}>
-          <Environment preset="city" />
+    <div className="w-full h-screen relative bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+      {/* 3D Canvas */}
+      <Canvas camera={{ position: [0, 5, 10], fov: 60 }} shadows className="w-full h-full">
+        <Suspense
+          fallback={
+            <Html center>
+              <LoadingScreen />
+            </Html>
+          }
+        >
+          <Environment preset="warehouse" />
 
-          {/* Enhanced lighting for modern look */}
           <ambientLight intensity={0.4} />
           <directionalLight
             position={[10, 10, 5]}
-            intensity={1.2}
+            intensity={1}
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
           />
-          <directionalLight position={[-10, 10, -5]} intensity={0.8} />
-          <pointLight position={[0, 8, 0]} intensity={0.5} color="#ffffff" />
+          <pointLight position={[0, 10, 0]} intensity={0.5} />
 
-          <ModernGallery
-            artworks={galleryArtworks}
-            onSelectArtwork={viewArtwork}
-            onAddToCart={addToCart}
-            onLikeArtwork={likeArtwork}
-            galleryName={gallery.name}
-          />
+          {currentView === "gallery" && (
+            <ModernGallery
+              artworks={artworks}
+              onArtworkSelect={handleArtworkSelect}
+              onNavigateToCreator={() => setCurrentView("creator")}
+              onLike={handleLikeArtwork}
+              onView={handleViewArtwork}
+              isOwner={selectedGallery.ownerId === user.id}
+            />
+          )}
+
+          {currentView === "creator" && (
+            <CreatorPortal
+              onNavigateToGallery={() => setCurrentView("gallery")}
+              onAddArtwork={handleAddArtwork}
+              artworks={artworks}
+              maxArtworks={6}
+            />
+          )}
+
+          {currentView === "checkout" && selectedArtwork && (
+            <CheckoutPage
+              artwork={selectedArtwork}
+              onBack={() => setCurrentView("gallery")}
+              onPurchase={(artwork) => {
+                console.log("Purchase:", artwork)
+                setCurrentView("gallery")
+              }}
+            />
+          )}
 
           <OrbitControls
             enablePan={true}
             enableZoom={true}
             enableRotate={true}
+            minDistance={5}
+            maxDistance={50}
+            minPolarAngle={0}
             maxPolarAngle={Math.PI / 2}
-            minDistance={3}
-            maxDistance={20}
           />
         </Suspense>
       </Canvas>
 
+      {/* UI Overlay */}
       <GalleryUI
-        selectedArtwork={selectedArtwork}
-        setSelectedArtwork={setSelectedArtwork}
-        cart={cart}
-        setCart={setCart}
-        onBackToGalleries={onBackToGalleries}
-        onCheckout={onCheckout}
-        onLogout={onLogout}
-        onOpenDashboard={onOpenDashboard}
-        galleryName={gallery.name}
-        isOwner={isOwner}
+        gallery={selectedGallery}
+        currentView={currentView}
+        onBack={onBack}
+        onNavigate={setCurrentView}
+        user={user}
+        artworkCount={artworks.length}
       />
-
-      <Suspense fallback={<LoadingScreen />}>
-        <div />
-      </Suspense>
     </div>
   )
 }
