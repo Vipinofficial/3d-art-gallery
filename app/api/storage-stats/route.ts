@@ -1,43 +1,50 @@
 import { NextResponse } from "next/server"
-import { readdir, stat } from "fs/promises"
-import { existsSync } from "fs"
+import { promises as fs } from "fs"
 import path from "path"
 
 export async function GET() {
   try {
-    const galleriesDir = path.join(process.cwd(), "public", "uploads", "galleries")
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", "galleries")
 
-    if (!existsSync(galleriesDir)) {
-      return NextResponse.json({ totalFiles: 0, totalSize: 0, galleriesCount: 0 })
-    }
-
-    const galleries = await readdir(galleriesDir)
     let totalFiles = 0
     let totalSize = 0
+    let galleriesCount = 0
 
-    for (const gallery of galleries) {
-      const galleryPath = path.join(galleriesDir, gallery)
-      const galleryStat = await stat(galleryPath)
+    try {
+      const galleries = await fs.readdir(uploadsDir)
+      galleriesCount = galleries.length
 
-      if (galleryStat.isDirectory()) {
-        const files = await readdir(galleryPath)
-        totalFiles += files.length
+      for (const gallery of galleries) {
+        const galleryPath = path.join(uploadsDir, gallery)
+        const stat = await fs.stat(galleryPath)
 
-        for (const file of files) {
-          const filePath = path.join(galleryPath, file)
-          const fileStat = await stat(filePath)
-          totalSize += fileStat.size
+        if (stat.isDirectory()) {
+          const files = await fs.readdir(galleryPath)
+          totalFiles += files.length
+
+          for (const file of files) {
+            const filePath = path.join(galleryPath, file)
+            const fileStat = await fs.stat(filePath)
+            totalSize += fileStat.size
+          }
         }
       }
+    } catch (error) {
+      // Directory doesn't exist yet
+      console.warn("Uploads directory doesn't exist yet:", error)
     }
 
     return NextResponse.json({
       totalFiles,
       totalSize,
-      galleriesCount: galleries.length,
+      galleriesCount,
     })
   } catch (error) {
     console.error("Storage stats error:", error)
-    return NextResponse.json({ totalFiles: 0, totalSize: 0, galleriesCount: 0 })
+    return NextResponse.json({
+      totalFiles: 0,
+      totalSize: 0,
+      galleriesCount: 0,
+    })
   }
 }

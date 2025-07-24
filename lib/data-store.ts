@@ -51,7 +51,7 @@ class DataStore {
   private initialized = false
 
   constructor() {
-    // Don't initialize during SSR
+    // Only initialize on client side
     if (typeof window !== "undefined") {
       this.initializeData()
     }
@@ -80,7 +80,6 @@ class DataStore {
       }
     } catch (error) {
       console.warn("Failed to load data from server:", error)
-      // Use empty arrays as fallback
       this.galleries = []
       this.artworks = []
       this.users = []
@@ -88,6 +87,8 @@ class DataStore {
   }
 
   private async saveData() {
+    if (typeof window === "undefined") return
+
     try {
       await fetch("/api/data", {
         method: "POST",
@@ -291,4 +292,19 @@ class DataStore {
   }
 }
 
-export const dataStore = new DataStore()
+// Create singleton instance only on client side
+let dataStoreInstance: DataStore | null = null
+
+export const getDataStore = (): DataStore => {
+  if (typeof window === "undefined") {
+    // Return a mock instance for SSR
+    return {} as DataStore
+  }
+
+  if (!dataStoreInstance) {
+    dataStoreInstance = new DataStore()
+  }
+  return dataStoreInstance
+}
+
+export const dataStore = getDataStore()

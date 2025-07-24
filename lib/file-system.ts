@@ -79,14 +79,18 @@ class FileSystem {
   }
 
   // Delete file from server
-  async deleteFile(galleryId: string, fileName: string): Promise<{ success: boolean; error?: string }> {
+  async deleteFile(
+    galleryId: string,
+    fileName: string,
+    galleryName: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch("/api/delete-file", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ galleryId, fileName }),
+        body: JSON.stringify({ galleryId, fileName, galleryName }),
       })
 
       const result = await response.json()

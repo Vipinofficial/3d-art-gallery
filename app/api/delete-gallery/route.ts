@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { rm } from "fs/promises"
-import { existsSync } from "fs"
+import { promises as fs } from "fs"
 import path from "path"
 
 export async function POST(request: NextRequest) {
@@ -11,23 +10,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
     }
 
-    // Create gallery folder path
+    // Sanitize gallery name
     const sanitizedGalleryName = galleryName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
 
+    // Delete gallery folder
     const galleryDir = path.join(process.cwd(), "public", "uploads", "galleries", sanitizedGalleryName)
 
-    // Delete directory if it exists
-    if (existsSync(galleryDir)) {
-      await rm(galleryDir, { recursive: true, force: true })
+    try {
+      await fs.rmdir(galleryDir, { recursive: true })
+    } catch (error) {
+      console.warn("Gallery folder may not exist:", error)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Delete gallery error:", error)
-    return NextResponse.json({ success: false, error: "Failed to delete gallery folder" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to delete gallery" }, { status: 500 })
   }
 }

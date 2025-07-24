@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import { existsSync } from "fs"
+import { promises as fs } from "fs"
 import path from "path"
 
 export async function POST(request: NextRequest) {
@@ -14,39 +13,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
     }
 
-    // Create gallery folder path
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", "galleries")
+    await fs.mkdir(uploadsDir, { recursive: true })
+
+    // Create gallery-specific directory
     const sanitizedGalleryName = galleryName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
 
-    const galleryDir = path.join(process.cwd(), "public", "uploads", "galleries", sanitizedGalleryName)
-
-    // Create directory if it doesn't exist
-    if (!existsSync(galleryDir)) {
-      await mkdir(galleryDir, { recursive: true })
-    }
+    const galleryDir = path.join(uploadsDir, sanitizedGalleryName)
+    await fs.mkdir(galleryDir, { recursive: true })
 
     // Generate unique filename
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 8)
-    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg"
-    const fileName = `${galleryId}-${timestamp}-${randomId}.${extension}`
+    const extension = path.extname(file.name)
+    const fileName = `${galleryId}-${timestamp}-${randomId}${extension}`
 
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    // Save file
     const filePath = path.join(galleryDir, fileName)
+    const buffer = Buffer.from(await file.arrayBuffer())
+    await fs.writeFile(filePath, buffer)
 
-    await writeFile(filePath, buffer)
-
-    // Return public URL path
-    const publicPath = `/uploads/galleries/${sanitizedGalleryName}/${fileName}`
+    // Return file info
+    const fileUrl = `/uploads/galleries/${sanitizedGalleryName}/${fileName}`
 
     return NextResponse.json({
       success: true,
-      filePath: publicPath,
+      filePath: fileUrl,
       fileName: fileName,
     })
   } catch (error) {

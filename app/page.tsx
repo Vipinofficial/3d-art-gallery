@@ -4,110 +4,109 @@ import { useState, useEffect } from "react"
 import { AuthProvider } from "@/components/auth-provider"
 import { SecurityProvider } from "@/components/security-provider"
 import { LandingPage } from "@/components/landing-page"
-import { LoginForm } from "@/components/login-form"
 import { GalleryList } from "@/components/gallery-list"
-import { CreatorDashboard } from "@/components/creator-dashboard"
-import { UploadArtwork } from "@/components/upload-artwork"
 import { ArtGallery3D } from "@/components/art-gallery-3d"
+import { CreatorPortal } from "@/components/creator-portal"
+import { CheckoutPage } from "@/components/checkout-page"
 import { LoadingScreen } from "@/components/loading-screen"
-import { dataStore, type Gallery } from "@/lib/data-store"
-
-type AppView = "landing" | "login" | "galleries" | "create-gallery" | "upload" | "gallery-3d"
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<AppView>("landing")
-  const [user, setUser] = useState<any>(null)
-  const [selectedGallery, setSelectedGallery] = useState<Gallery | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [currentView, setCurrentView] = useState<"landing" | "galleries" | "gallery" | "creator" | "checkout">(
+    "landing",
+  )
+  const [selectedGalleryId, setSelectedGalleryId] = useState<string | null>(null)
+  const [selectedArtworkId, setSelectedArtworkId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate app initialization
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+    // Initialize the app
+    const initializeApp = async () => {
+      try {
+        // Give the data store time to initialize
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Failed to initialize app:", error)
+        setIsLoading(false)
+      }
+    }
 
-    return () => clearTimeout(timer)
+    initializeApp()
   }, [])
 
-  const handleLogin = async (userData: any) => {
-    setUser(userData)
-
-    // Check if user has a gallery
-    const userGallery = await dataStore.getUserGallery(userData.id)
-    if (userGallery) {
-      setCurrentView("galleries")
-    } else {
-      setCurrentView("galleries") // Still show galleries page, they can create from there
-    }
-  }
-
-  const handleLogout = () => {
-    setUser(null)
-    setSelectedGallery(null)
-    setCurrentView("landing")
-  }
-
-  const handleSelectGallery = (gallery: Gallery) => {
-    setSelectedGallery(gallery)
-    setCurrentView("gallery-3d")
-  }
-
-  const handleCreateGallerySuccess = (gallery: Gallery) => {
-    setSelectedGallery(gallery)
+  const handleViewGalleries = () => {
     setCurrentView("galleries")
   }
 
-  if (loading) {
+  const handleViewGallery = (galleryId: string) => {
+    setSelectedGalleryId(galleryId)
+    setCurrentView("gallery")
+  }
+
+  const handleBackToGalleries = () => {
+    setSelectedGalleryId(null)
+    setCurrentView("galleries")
+  }
+
+  const handleBackToLanding = () => {
+    setCurrentView("landing")
+  }
+
+  const handleOpenCreator = () => {
+    setCurrentView("creator")
+  }
+
+  const handlePurchaseArtwork = (artworkId: string) => {
+    setSelectedArtworkId(artworkId)
+    setCurrentView("checkout")
+  }
+
+  const handleBackFromCheckout = () => {
+    setSelectedArtworkId(null)
+    if (selectedGalleryId) {
+      setCurrentView("gallery")
+    } else {
+      setCurrentView("galleries")
+    }
+  }
+
+  if (isLoading) {
     return <LoadingScreen />
   }
 
   return (
-    <SecurityProvider>
-      <AuthProvider>
-        <div className="min-h-screen">
+    <AuthProvider>
+      <SecurityProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
           {currentView === "landing" && (
-            <LandingPage
-              onGetStarted={() => setCurrentView("login")}
-              onExploreGalleries={() => setCurrentView("login")}
-            />
+            <LandingPage onViewGalleries={handleViewGalleries} onOpenCreator={handleOpenCreator} />
           )}
 
-          {currentView === "login" && <LoginForm onLogin={handleLogin} onBack={() => setCurrentView("landing")} />}
-
-          {currentView === "galleries" && user && (
+          {currentView === "galleries" && (
             <GalleryList
-              user={user}
-              onSelectGallery={handleSelectGallery}
-              onCreateGallery={() => setCurrentView("create-gallery")}
-              onUploadArtwork={() => setCurrentView("upload")}
-              onBack={() => setCurrentView("landing")}
-              onLogout={handleLogout}
+              onViewGallery={handleViewGallery}
+              onBackToLanding={handleBackToLanding}
+              onOpenCreator={handleOpenCreator}
             />
           )}
 
-          {currentView === "create-gallery" && user && (
-            <CreatorDashboard
-              user={user}
-              onBack={() => setCurrentView("galleries")}
-              onLogout={handleLogout}
-              onSuccess={handleCreateGallerySuccess}
+          {currentView === "gallery" && selectedGalleryId && (
+            <ArtGallery3D
+              galleryId={selectedGalleryId}
+              onBack={handleBackToGalleries}
+              onPurchase={handlePurchaseArtwork}
             />
           )}
 
-          {currentView === "upload" && user && (
-            <UploadArtwork
-              user={user}
-              onBack={() => setCurrentView("galleries")}
-              onLogout={handleLogout}
-              onSuccess={() => setCurrentView("galleries")}
-            />
+          {currentView === "creator" && (
+            <CreatorPortal onBack={currentView === "galleries" ? handleBackToGalleries : handleBackToLanding} />
           )}
 
-          {currentView === "gallery-3d" && selectedGallery && user && (
-            <ArtGallery3D selectedGallery={selectedGallery} onBack={() => setCurrentView("galleries")} user={user} />
+          {currentView === "checkout" && selectedArtworkId && (
+            <CheckoutPage artworkId={selectedArtworkId} onBack={handleBackFromCheckout} />
           )}
         </div>
-      </AuthProvider>
-    </SecurityProvider>
+      </SecurityProvider>
+    </AuthProvider>
   )
 }
