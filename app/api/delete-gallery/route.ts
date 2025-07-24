@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const { galleryId, galleryName } = await request.json()
 
     if (!galleryId || !galleryName) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
     }
 
     // Create gallery folder path
@@ -18,16 +18,16 @@ export async function POST(request: NextRequest) {
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
 
-    const galleryPath = path.join(process.cwd(), "public", "uploads", "galleries", sanitizedGalleryName)
+    const galleryDir = path.join(process.cwd(), "public", "uploads", "galleries", sanitizedGalleryName)
 
     // Delete directory if it exists
-    if (existsSync(galleryPath)) {
-      await rm(galleryPath, { recursive: true, force: true })
+    if (existsSync(galleryDir)) {
+      await rm(galleryDir, { recursive: true, force: true })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Delete gallery error:", error)
-    return NextResponse.json({ error: "Failed to delete gallery folder" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to delete gallery folder" }, { status: 500 })
   }
 }
