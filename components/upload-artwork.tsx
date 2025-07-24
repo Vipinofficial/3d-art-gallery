@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Upload, Link, X, ImageIcon, AlertTriangle, LogOut } from "lucide-react"
 import { useSecurity } from "@/components/security-provider"
 import { dataStore } from "@/lib/data-store"
+import { fileManager } from "@/lib/file-manager"
 import { TermsConditions } from "@/components/terms-conditions"
 
 interface UploadArtworkProps {
@@ -38,7 +39,7 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
   const [showTerms, setShowTerms] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { sanitizeInput, validateFileUpload } = useSecurity()
+  const { sanitizeInput } = useSecurity()
 
   const userGallery = dataStore.getUserGallery(user.id)
   const galleryArtworks = userGallery ? dataStore.getArtworksByGallery(userGallery.id) : []
@@ -46,7 +47,13 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && validateFileUpload(file)) {
+    if (file) {
+      const validation = fileManager.validateFile(file)
+      if (!validation.isValid) {
+        alert(validation.error)
+        return
+      }
+
       setSelectedFile(file)
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
@@ -98,15 +105,24 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
     setIsUploading(true)
 
     try {
-      // Simulate image upload delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      let finalImageUrl = ""
+      let fileName = ""
 
-      // In a real app, you would upload the image to a server here
-      // For now, we'll use the preview URL or provided URL
-      const finalImageUrl =
-        uploadMethod === "file"
-          ? `/placeholder.svg?height=400&width=400&text=${encodeURIComponent(sanitizedData.title)}`
-          : sanitizedData.imageUrl || imageSource
+      if (uploadMethod === "file" && selectedFile) {
+        // Upload file to gallery folder
+        const uploadResult = await fileManager.uploadFile(selectedFile, userGallery.name, userGallery.id)
+
+        if (!uploadResult.success) {
+          alert(uploadResult.error || "Upload failed")
+          return
+        }
+
+        finalImageUrl = uploadResult.filePath || ""
+        fileName = fileManager.generateFileName(selectedFile.name, userGallery.id)
+      } else {
+        // Use provided URL
+        finalImageUrl = sanitizedData.imageUrl || imageSource
+      }
 
       const newArtwork = {
         title: sanitizedData.title,
@@ -121,6 +137,7 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
         sales: 0,
         hasAdultContent,
         galleryId: userGallery.id,
+        fileName: uploadMethod === "file" ? fileName : undefined,
       }
 
       dataStore.addArtwork(newArtwork)
@@ -217,6 +234,9 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
                   <Badge variant="secondary">
                     {galleryArtworks.length}/{maxArtworks} artworks
                   </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Folder: /uploads/galleries/{userGallery.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}
+                  </Badge>
                   {userGallery.hasAdultContent && (
                     <Badge variant="destructive" className="bg-orange-500">
                       Adult Content
@@ -281,6 +301,10 @@ export function UploadArtwork({ user, onBack, onLogout, onSuccess }: UploadArtwo
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Supported formats: JPEG, PNG, GIF, WebP. Max size: 10MB
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Files will be saved to: /uploads/galleries/
+                      {userGallery.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}/
                     </p>
                   </div>
                 ) : (

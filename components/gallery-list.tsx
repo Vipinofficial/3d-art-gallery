@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Eye, LogOut, Palette, Settings, Search, Upload, AlertTriangle } from "lucide-react"
+import { Plus, Eye, LogOut, Palette, Settings, Search, Upload, AlertTriangle, Trash2 } from "lucide-react"
 import { dataStore, type Gallery } from "@/lib/data-store"
 import { TermsConditions } from "@/components/terms-conditions"
+import { DeleteConfirmation } from "@/components/delete-confirmation"
 
 interface GalleryListProps {
   user: any
@@ -25,6 +26,7 @@ export function GalleryList({ user, onSelectGallery, onLogout, onOpenDashboard, 
   const [searchTerm, setSearchTerm] = useState("")
   const [showTerms, setShowTerms] = useState(false)
   const [selectedGalleryForTerms, setSelectedGalleryForTerms] = useState<Gallery | null>(null)
+  const [showDeleteGallery, setShowDeleteGallery] = useState(false)
 
   useEffect(() => {
     loadGalleries()
@@ -64,6 +66,20 @@ export function GalleryList({ user, onSelectGallery, onLogout, onOpenDashboard, 
       setNewGalleryDescription("")
       setShowCreateForm(false)
       loadGalleries()
+    }
+  }
+
+  const handleDeleteGallery = async () => {
+    if (!userGallery) return
+
+    const result = await dataStore.deleteGallery(userGallery.id)
+    if (result.success) {
+      // Update user to remove gallery reference
+      dataStore.updateUser(user.id, { hasGallery: false, galleryId: undefined })
+      loadGalleries()
+      alert("Gallery and all its contents have been permanently deleted!")
+    } else {
+      alert(result.error || "Failed to delete gallery")
     }
   }
 
@@ -196,6 +212,9 @@ export function GalleryList({ user, onSelectGallery, onLogout, onOpenDashboard, 
                       <p className="text-gray-600">{userGallery.description}</p>
                       <div className="flex items-center space-x-4 mt-2">
                         <Badge variant="secondary">{userGallery.artworkCount}/6 artworks</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          /uploads/galleries/{userGallery.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}
+                        </Badge>
                         <span className="text-sm text-gray-500">{userGallery.totalViews} views</span>
                         {userGallery.hasAdultContent && (
                           <Badge variant="destructive" className="bg-orange-500">
@@ -225,6 +244,14 @@ export function GalleryList({ user, onSelectGallery, onLogout, onOpenDashboard, 
                     <Button onClick={() => onSelectGallery(userGallery)} className="flex items-center space-x-2">
                       <Eye className="w-4 h-4" />
                       <span>View 3D</span>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowDeleteGallery(true)}
+                      className="flex items-center space-x-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete</span>
                     </Button>
                   </div>
                 </div>
@@ -306,6 +333,16 @@ export function GalleryList({ user, onSelectGallery, onLogout, onOpenDashboard, 
         }}
         onAccept={handleTermsAccept}
         showAdultContent={selectedGalleryForTerms?.hasAdultContent || false}
+      />
+
+      {/* Delete Gallery Confirmation */}
+      <DeleteConfirmation
+        isOpen={showDeleteGallery}
+        onClose={() => setShowDeleteGallery(false)}
+        onConfirm={handleDeleteGallery}
+        itemName={userGallery?.name || ""}
+        itemType="gallery"
+        warningMessage="This action will delete the entire gallery folder and all its contents permanently."
       />
     </div>
   )

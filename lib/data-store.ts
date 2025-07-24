@@ -1,5 +1,7 @@
 "use client"
 
+import { fileManager } from "./file-manager"
+
 export interface Artwork {
   id: string
   title: string
@@ -15,6 +17,7 @@ export interface Artwork {
   hasAdultContent: boolean
   createdAt: string
   galleryId: string
+  fileName?: string // Added for file tracking
 }
 
 export interface Gallery {
@@ -290,6 +293,50 @@ class DataStore {
     return this.galleries[index]
   }
 
+  // Enhanced delete gallery method with file cleanup
+  async deleteGallery(id: string): Promise<{ success: boolean; error?: string }> {
+    const gallery = this.galleries.find((g) => g.id === id)
+    if (!gallery) {
+      return { success: false, error: "Gallery not found" }
+    }
+
+    try {
+      // Delete all artworks in the gallery first
+      const galleryArtworks = this.artworks.filter((a) => a.galleryId === id)
+
+      // Delete individual artwork files
+      for (const artwork of galleryArtworks) {
+        if (artwork.fileName) {
+          await fileManager.deleteFile(id, artwork.fileName)
+        }
+      }
+
+      // Delete the entire gallery folder
+      const folderDeletion = await fileManager.deleteGalleryFolder(id, gallery.name)
+      if (!folderDeletion.success) {
+        console.warn("Failed to delete gallery folder:", folderDeletion.error)
+      }
+
+      // Remove artworks from data store
+      this.artworks = this.artworks.filter((a) => a.galleryId !== id)
+
+      // Remove gallery from data store
+      this.galleries = this.galleries.filter((g) => g.id !== id)
+
+      // Update user to remove gallery reference
+      const user = this.users.find((u) => u.id === gallery.ownerId)
+      if (user) {
+        user.hasGallery = false
+        delete user.galleryId
+      }
+
+      this.saveData()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: "Failed to delete gallery" }
+    }
+  }
+
   // Artwork methods
   getArtworksByGallery(galleryId: string): Artwork[] {
     return this.artworks.filter((a) => a.galleryId === galleryId)
@@ -318,21 +365,37 @@ class DataStore {
     return newArtwork
   }
 
-  removeArtwork(id: string): boolean {
+  // Enhanced remove artwork method with file cleanup
+  async removeArtwork(id: string): Promise<{ success: boolean; error?: string }> {
     const artwork = this.artworks.find((a) => a.id === id)
-    if (!artwork) return false
-
-    this.artworks = this.artworks.filter((a) => a.id !== id)
-
-    // Update gallery artwork count
-    const gallery = this.galleries.find((g) => g.id === artwork.galleryId)
-    if (gallery) {
-      gallery.artworkCount = this.getArtworksByGallery(artwork.galleryId).length
-      gallery.updatedAt = new Date().toISOString()
+    if (!artwork) {
+      return { success: false, error: "Artwork not found" }
     }
 
-    this.saveData()
-    return true
+    try {
+      // Delete the artwork file if it exists
+      if (artwork.fileName) {
+        const fileDeletion = await fileManager.deleteFile(artwork.galleryId, artwork.fileName)
+        if (!fileDeletion.success) {
+          console.warn("Failed to delete artwork file:", fileDeletion.error)
+        }
+      }
+
+      // Remove artwork from data store
+      this.artworks = this.artworks.filter((a) => a.id !== id)
+
+      // Update gallery artwork count
+      const gallery = this.galleries.find((g) => g.id === artwork.galleryId)
+      if (gallery) {
+        gallery.artworkCount = this.getArtworksByGallery(artwork.galleryId).length
+        gallery.updatedAt = new Date().toISOString()
+      }
+
+      this.saveData()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: "Failed to delete artwork" }
+    }
   }
 
   updateArtwork(id: string, updates: Partial<Artwork>): Artwork | null {
@@ -387,6 +450,11 @@ class DataStore {
     artwork.views += 1
     this.saveData()
     return true
+  }
+
+  // Get storage statistics
+  getStorageStats() {
+    return fileManager.getStorageStats()
   }
 }
 

@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, BarChart3, Eye, Heart, TrendingUp, LogOut, X, Upload, AlertTriangle } from "lucide-react"
+import { ArrowLeft, BarChart3, Eye, Heart, TrendingUp, LogOut, Upload, AlertTriangle, Trash2 } from "lucide-react"
 import { dataStore, type Artwork, type Gallery } from "@/lib/data-store"
+import { DeleteConfirmation } from "@/components/delete-confirmation"
 
 interface CreatorDashboardProps {
   user: any
@@ -17,6 +18,9 @@ interface CreatorDashboardProps {
 export function CreatorDashboard({ user, onBack, onLogout }: CreatorDashboardProps) {
   const [artworks, setArtworks] = useState<Artwork[]>([])
   const [gallery, setGallery] = useState<Gallery | null>(null)
+  const [showDeleteArtwork, setShowDeleteArtwork] = useState(false)
+  const [showDeleteGallery, setShowDeleteGallery] = useState(false)
+  const [selectedArtwork, setSelectedArtwork] = useState<Artwork | null>(null)
 
   useEffect(() => {
     loadData()
@@ -32,11 +36,34 @@ export function CreatorDashboard({ user, onBack, onLogout }: CreatorDashboardPro
     }
   }
 
-  const removeArtwork = (artworkId: string) => {
-    if (confirm("Are you sure you want to remove this artwork?")) {
-      dataStore.removeArtwork(artworkId)
+  const handleDeleteArtwork = async () => {
+    if (!selectedArtwork) return
+
+    const result = await dataStore.removeArtwork(selectedArtwork.id)
+    if (result.success) {
       loadData() // Refresh data
+      setSelectedArtwork(null)
+      alert("Artwork deleted successfully!")
+    } else {
+      alert(result.error || "Failed to delete artwork")
     }
+  }
+
+  const handleDeleteGallery = async () => {
+    if (!gallery) return
+
+    const result = await dataStore.deleteGallery(gallery.id)
+    if (result.success) {
+      alert("Gallery and all its contents have been permanently deleted!")
+      onBack() // Go back to galleries list
+    } else {
+      alert(result.error || "Failed to delete gallery")
+    }
+  }
+
+  const openDeleteArtwork = (artwork: Artwork) => {
+    setSelectedArtwork(artwork)
+    setShowDeleteArtwork(true)
   }
 
   if (!gallery) {
@@ -95,6 +122,9 @@ export function CreatorDashboard({ user, onBack, onLogout }: CreatorDashboardPro
                 <p className="text-gray-600">{gallery.description}</p>
                 <div className="flex items-center space-x-4 mt-2">
                   <Badge variant="secondary">{artworks.length}/6 artworks</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Folder: /uploads/galleries/{gallery.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}
+                  </Badge>
                   <span className="text-sm text-gray-500">{gallery.totalViews} total views</span>
                   {gallery.hasAdultContent && (
                     <Badge variant="destructive" className="bg-orange-500">
@@ -102,6 +132,16 @@ export function CreatorDashboard({ user, onBack, onLogout }: CreatorDashboardPro
                     </Badge>
                   )}
                 </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteGallery(true)}
+                  className="flex items-center space-x-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Gallery</span>
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -193,18 +233,21 @@ export function CreatorDashboard({ user, onBack, onLogout }: CreatorDashboardPro
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeArtwork(artwork.id)}
+                              onClick={() => openDeleteArtwork(artwork)}
                               className="text-red-500 hover:text-red-700 p-1"
                             >
-                              <X className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">${artwork.price}</p>
-                          <div className="flex justify-between text-xs text-gray-500">
+                          <div className="flex justify-between text-xs text-gray-500 mb-2">
                             <span>{artwork.views} views</span>
                             <span>{artwork.likes} likes</span>
                             <span>{artwork.sales} sales</span>
                           </div>
+                          {artwork.fileName && (
+                            <p className="text-xs text-blue-600 truncate">File: {artwork.fileName}</p>
+                          )}
                           {artwork.hasAdultContent && (
                             <div className="flex items-center space-x-1 mt-2 text-orange-600">
                               <AlertTriangle className="w-3 h-3" />
@@ -339,6 +382,29 @@ export function CreatorDashboard({ user, onBack, onLogout }: CreatorDashboardPro
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Artwork Confirmation */}
+      <DeleteConfirmation
+        isOpen={showDeleteArtwork}
+        onClose={() => {
+          setShowDeleteArtwork(false)
+          setSelectedArtwork(null)
+        }}
+        onConfirm={handleDeleteArtwork}
+        itemName={selectedArtwork?.title || ""}
+        itemType="artwork"
+        warningMessage="This will permanently delete the artwork and its associated file."
+      />
+
+      {/* Delete Gallery Confirmation */}
+      <DeleteConfirmation
+        isOpen={showDeleteGallery}
+        onClose={() => setShowDeleteGallery(false)}
+        onConfirm={handleDeleteGallery}
+        itemName={gallery.name}
+        itemType="gallery"
+        warningMessage="This action will delete the entire gallery folder and cannot be undone."
+      />
     </div>
   )
 }
